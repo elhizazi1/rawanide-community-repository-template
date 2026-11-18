@@ -10,7 +10,7 @@ A **starter repository**, not a collection of the template author's extensions. 
 4. Develop and test your extension locally using the [RawanIDE Extension SDK](https://github.com/elhizazi1/rawanide-extension-sdk) and its current instructions. The SDK and this repository serve different purposes.
 5. Copy your **extension source** (including `manifest.json` and the icon) into `extension-src/<your-name>/`. Add an entry to `repo.config.json` → `extensions` with `src`, `releaseDate`, `tags`, `changelog.en`, and optional `license`. The existing builder packages that source into `.r1` and publishes it. **Do not copy anyone else's sample extensions.**
 6. Run `node tools/build.mjs` (Node 18+) in your cloned repository. It detects the GitHub origin automatically. Review the generated `repository.json` and `extensions/` files. Commit and push your changes.
-7. GitHub Actions runs the same build and commits generated output. Under **Settings → Pages**, select **Deploy from a branch**, `main`, `/ (root)` to publish the site. Add the raw `repository.json` URL to Marketplace using the procedure supported by your Marketplace version.
+7. GitHub Actions builds and commits generated output, then **attempts to enable GitHub Pages automatically** for `main` / `(root)`. Check the run’s **Summary** for the website link and setup status. If GitHub denies automatic activation, use the one-time **Settings → Pages → Deploy from a branch → main → / (root) → Save** link shown in the summary. Add the raw `repository.json` URL to Marketplace using the procedure supported by your Marketplace version.
 
 **Important:** If your Marketplace issues a repository verification token, set `verification` to that token before publishing; do not copy another publisher's token. The exact claim/verification process must be checked against the deployed Marketplace documentation.
 
@@ -47,5 +47,9 @@ This starter includes the Maghribi Assile font and keeps a Moroccan-inspired pal
 - The initial GitHub Actions run can publish an empty repository without editing the template author's GitHub coordinates.
 - GitHub Actions derives owner/repo/branch from `GITHUB_REPOSITORY` and `GITHUB_REF_NAME`; a local clone uses its `origin` remote. A standalone downloaded ZIP needs explicit `owner` and `repo` values.
 - `repository.id`, name, publisher and descriptions are *display metadata*, not GitHub coordinates. Customize them before registering in Marketplace; the example ID is not suitable for production.
-- Enable **Settings → Actions → General → Workflow permissions → Read and write permissions** if the generated-file commit is denied, and configure **Settings → Pages → Deploy from a branch → main / (root)** to publish the website.
+- Enable **Settings → Actions → General → Workflow permissions → Read and write permissions** if the generated-file commit is denied, and, if automatic Pages activation is denied by GitHub, use the one-time **Settings → Pages → Deploy from a branch → main / (root)** setup. The workflow reports this in its Summary.
 - The workflow only commits generated files when their content changes. An empty `extensions` directory is optional.
+
+## GitHub Pages first-run diagnostics
+
+The workflow attempts to enable Pages via the GitHub API using its built-in token. GitHub may reject this operation depending on repository policy or token privileges; the workflow cannot bypass those restrictions. The build can succeed while the website is not yet deployed. Read the **Actions run → Summary** for the exact one-time setup link. Once Pages is enabled, GitHub handles subsequent deployments automatically from `main` / `(root)`.

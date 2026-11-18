@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  pages: write
 
 concurrency:
   group: community-repository-publish
@@ -27,7 +28,6 @@ jobs:
       - name: Commit generated files
         shell: bash
         run: |
-          # Stage only generated files that exist, including optional extension output.
           git add -A -- repository.json index.html about
           if [[ -d extensions ]]; then
             git add -A -- extensions
@@ -40,3 +40,35 @@ jobs:
           else
             echo 'No generated changes to publish.'
           fi
+      - name: Check and attempt first-time GitHub Pages setup
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}/pages"
+          headers=(-H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' -H "Authorization: Bearer ${GH_TOKEN}")
+          response="$(mktemp)"
+          status="$(curl -sS -o "$response" -w '%{http_code}' "${headers[@]}" "$api")"
+          if [[ "$status" == '404' ]]; then
+            # Try to enable Pages using the same branch/root mode verified by the template author.
+            status="$(curl -sS -o "$response" -w '%{http_code}' -X POST "${headers[@]}" \
+              -H 'Content-Type: application/json' \
+              -d '{"source":{"branch":"main","path":"/"}}' "$api")"
+          fi
+          {
+            echo '## RawanIDE community repository publishing'
+            echo "- Repository JSON: https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/main/repository.json"
+            echo "- Expected website: https://${GITHUB_REPOSITORY_OWNER,,}.github.io/${GITHUB_REPOSITORY#*/}/"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [[ "$status" == '200' || "$status" == '201' ]]; then
+            echo '- GitHub Pages: configured. Deployment may take a few minutes.' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::GitHub Pages is not enabled (API status $status). Open Settings > Pages and select Deploy from a branch, main, /(root)."
+            {
+              echo "- GitHub Pages: automatic setup unavailable (API HTTP $status)."
+              echo "- **One-time setup:** [Settings → Pages](https://github.com/${GITHUB_REPOSITORY}/settings/pages) → Deploy from a branch → main → /(root) → Save."
+              echo '- This is a GitHub permission/Pages configuration requirement, not an extension build failure.'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          rm -f "$response"
