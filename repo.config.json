@@ -1,7 +1,7 @@
 {
-  "owner": "elhizazi1",
-"repo": "rawanide-community-repository-template",
-"branch": "main",
+  "owner": "YOUR_GITHUB_USERNAME",
+  "repo": "YOUR_REPOSITORY_NAME",
+  "branch": "main",
   "verification": "",
   "repository": {
     "id": "community.example.repository",

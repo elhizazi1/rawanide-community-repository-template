@@ -6,10 +6,10 @@ A **starter repository**, not a collection of the template author's extensions. 
 
 1. Create a repository from this template (GitHub **Use this template**) or copy these files into a new repository.
 2. Clone your new repository on Android/Termux or your computer.
-3. Edit `repo.config.json`: set your actual `owner`, `repo`, `branch`, and `repository` identity. Keep `extensions: []` until your first release. The repository ID must be unique; do not reuse the example ID.
+3. GitHub Actions detects the GitHub owner and repository name automatically. **You do not need to edit `owner` or `repo`**. Customize `repo.config.json` → `repository` (publisher, title, description, and a unique ID) when ready; keep `extensions: []` until your first release. The starter will build with zero extensions even before customization.
 4. Develop and test your extension locally using the [RawanIDE Extension SDK](https://github.com/elhizazi1/rawanide-extension-sdk) and its current instructions. The SDK and this repository serve different purposes.
 5. Copy your **extension source** (including `manifest.json` and the icon) into `extension-src/<your-name>/`. Add an entry to `repo.config.json` → `extensions` with `src`, `releaseDate`, `tags`, `changelog.en`, and optional `license`. The existing builder packages that source into `.r1` and publishes it. **Do not copy anyone else's sample extensions.**
-6. Run `node tools/build.mjs` (Node 18+). Review the generated `repository.json` and `extensions/` files. Commit and push your changes.
+6. Run `node tools/build.mjs` (Node 18+) in your cloned repository. It detects the GitHub origin automatically. Review the generated `repository.json` and `extensions/` files. Commit and push your changes.
 7. GitHub Actions runs the same build and commits generated output. Under **Settings → Pages**, select **Deploy from a branch**, `main`, `/ (root)` to publish the site. Add the raw `repository.json` URL to Marketplace using the procedure supported by your Marketplace version.
 
 **Important:** If your Marketplace issues a repository verification token, set `verification` to that token before publishing; do not copy another publisher's token. The exact claim/verification process must be checked against the deployed Marketplace documentation.
@@ -41,3 +41,11 @@ A **starter repository**, not a collection of the template author's extensions. 
 ## Typeface
 
 This starter includes the Maghribi Assile font and keeps a Moroccan-inspired palette. Confirm redistribution rights before publicly publishing the font file.
+
+## First-run behavior
+
+- The initial GitHub Actions run can publish an empty repository without editing the template author's GitHub coordinates.
+- GitHub Actions derives owner/repo/branch from `GITHUB_REPOSITORY` and `GITHUB_REF_NAME`; a local clone uses its `origin` remote. A standalone downloaded ZIP needs explicit `owner` and `repo` values.
+- `repository.id`, name, publisher and descriptions are *display metadata*, not GitHub coordinates. Customize them before registering in Marketplace; the example ID is not suitable for production.
+- Enable **Settings → Actions → General → Workflow permissions → Read and write permissions** if the generated-file commit is denied, and configure **Settings → Pages → Deploy from a branch → main / (root)** to publish the website.
+- The workflow only commits generated files when their content changes. An empty `extensions` directory is optional.

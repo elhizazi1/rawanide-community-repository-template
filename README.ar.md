@@ -17,3 +17,11 @@
 المشروع يعتمد على بنية البناء المستخلصة من مستودع مجتمع RawanIDE، مع فصل هوية الناشر عن القالب. يلزم اختبار النشر الفعلي والتوافق مع Marketplace قبل اعتباره إصدارًا نهائيًا.
 
 [تطبيق RawanIDE](https://github.com/elhizazi1/RawanIDE) · [Extension SDK](https://github.com/elhizazi1/rawanide-extension-sdk) · [Marketplace](https://rawanide.elhizazi.me/repositories)
+
+## الإعداد التلقائي عند إنشاء مستودع من القالب
+
+- لا تحتاج إلى تعديل `owner` أو `repo` يدويًا: يتعرف GitHub Actions على الحساب واسم المستودع والفرع تلقائيًا. وعند التشغيل المحلي داخل نسخة مستنسخة يستخدم عنوان `origin`.
+- يبدأ المستودع دون إضافات، ويعمل البناء حتى في غياب مجلد `extensions`.
+- خصص بيانات العرض في `repo.config.json` ضمن `repository`، وخاصة `id` الفريد والاسم والناشر والوصف، قبل تسجيل المستودع في Marketplace.
+- في إعدادات GitHub فعّل صلاحيات القراءة والكتابة لـActions إذا رُفض حفظ المخرجات، ثم اضبط Pages على الفرع `main` والمجلد `/ (root)`.
+- لا يُعاد إنشاء Commit إلا إذا تغيرت ملفات البناء فعلًا.

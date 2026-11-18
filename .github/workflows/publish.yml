@@ -1,13 +1,17 @@
 name: Build and publish community repository
+
 on:
   push:
     branches: [main]
   workflow_dispatch:
+
 permissions:
   contents: write
+
 concurrency:
   group: community-repository-publish
   cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -18,19 +22,21 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Check repository owner and branch
-        shell: bash
-        run: |
-          node --input-type=module -e "import fs from 'node:fs'; const c=JSON.parse(fs.readFileSync('repo.config.json')); const [owner,repo]=process.env.GITHUB_REPOSITORY.split('/'); if(c.owner!==owner||c.repo!==repo||c.branch!==process.env.GITHUB_REF_NAME) throw Error('Update repo.config.json owner/repo/branch to match this repository before publishing');"
       - name: Build repository and packages
         run: node tools/build.mjs
       - name: Commit generated files
         shell: bash
         run: |
-          if [[ -n "$(git status --porcelain -- repository.json index.html about extensions)" ]]; then
+          # Stage only generated files that exist, including optional extension output.
+          git add -A -- repository.json index.html about
+          if [[ -d extensions ]]; then
+            git add -A -- extensions
+          fi
+          if ! git diff --cached --quiet; then
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git add repository.json index.html about extensions
             git commit -m 'chore: publish community repository [skip ci]'
             git push
+          else
+            echo 'No generated changes to publish.'
           fi

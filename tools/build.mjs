@@ -6,13 +6,14 @@
 // index.html, about/index.html and every extension page so the pages also work offline.
 //
 // Usage:  node tools/build.mjs          (no dependencies, Node 18+)
-// Edit repo.config.json first: owner, repo, branch, the MarketPlace verification code, and the "extensions" list.
+// Owner/repo are detected automatically from GitHub Actions or the local Git origin. Edit the repository identity, optional verification code, and extensions list.
 
 import fs from 'node:fs'
 import path from 'node:path'
 import zlib from 'node:zlib'
 import crypto from 'node:crypto'
 import { fileURLToPath } from 'node:url'
+import { execFileSync } from 'node:child_process'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const read = (p) => fs.readFileSync(path.join(root, p), 'utf8')
@@ -34,24 +35,54 @@ const writeJson = (p, v) => { fs.mkdirSync(path.dirname(path.join(root, p)), { r
 // Repository identity belongs to each template user, not the template author.
 const REPOSITORY = JSON.parse(read('repo.config.json')).repository
 
+// Resolve GitHub identity from the actual checkout, not the template author's settings.
+// GitHub Actions supplies these values. Locally, try the Git origin URL before falling
+// back to explicit config values (useful when building a downloaded ZIP offline).
+function remoteIdentity() {
+  try {
+    const remote = execFileSync('git', ['remote', 'get-url', 'origin'], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim()
+    const match = remote.match(/(?:github\.com[:/])([^/\s:]+)\/([^/\s]+?)(?:\.git)?$/i)
+    return match ? { owner: match[1], repo: match[2] } : null
+  } catch { return null }
+}
+function resolveIdentity(cfg) {
+  const github = process.env.GITHUB_REPOSITORY
+  const ci = process.env.GITHUB_ACTIONS === 'true'
+  if (ci && (!github || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(github))) {
+    throw Error('GITHUB_REPOSITORY is missing or invalid in GitHub Actions')
+  }
+  const match = github && github.match(/^([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)$/)
+  const remote = !match ? remoteIdentity() : null
+  const owner = match?.[1] || remote?.owner || cfg.owner
+  const repo = match?.[2] || remote?.repo || cfg.repo
+  const branch = (ci ? process.env.GITHUB_REF_NAME : undefined) || cfg.branch || 'main'
+  for (const [key, value] of Object.entries({ owner, repo, branch })) {
+    if (!/^[A-Za-z0-9._-]+$/.test(String(value || '')) || String(value).startsWith('YOUR_')) {
+      throw Error(`Cannot determine ${key}. Clone from GitHub or set it in repo.config.json.`)
+    }
+  }
+  return { owner, repo, branch }
+}
+
 const warn = []
 const fail = (m) => { console.error('✗ ' + m); process.exit(1) }
 
 // ---------- config ----------
 const cfg = JSON.parse(read('repo.config.json'))
-for (const k of ['owner', 'repo', 'branch']) if (!/^[A-Za-z0-9._-]+$/.test(String(cfg[k] || ''))) fail(`repo.config.json: "${k}" is missing or invalid`)
+let identity
+try { identity = resolveIdentity(cfg) } catch (e) { fail(e.message) }
 if (!Array.isArray(cfg.extensions)) fail('repo.config.json: "extensions" must be an array')
 if (!REPOSITORY || !REPOSITORY.id || !REPOSITORY.name || !REPOSITORY.publisher || !REPOSITORY.description) fail('repo.config.json: repository identity is incomplete')
 
 const ID = /^[a-z0-9][a-z0-9._-]{2,127}$/
 if (!ID.test(REPOSITORY.id)) fail('repository id is invalid')
-if (cfg.owner === 'YOUR_GITHUB_USERNAME' && process.env.CI === 'true') fail('Set owner in repo.config.json before publishing')
+
 const BLOCKED = ['TERMINAL_ACCESS', 'PROCESS_EXECUTION', 'DEVICE_FILES_READ', 'DEVICE_FILES_WRITE']
 
 // ---------- links ----------
-const rawBase = `https://raw.githubusercontent.com/${cfg.owner}/${cfg.repo}/${cfg.branch}`
-const repositoryUrl = `https://github.com/${cfg.owner}/${cfg.repo}`
-const pagesUrl = `https://${cfg.owner.toLowerCase()}.github.io/${cfg.repo}/`
+const rawBase = `https://raw.githubusercontent.com/${identity.owner}/${identity.repo}/${identity.branch}`
+const repositoryUrl = `https://github.com/${identity.owner}/${identity.repo}`
+const pagesUrl = `https://${identity.owner.toLowerCase()}.github.io/${identity.repo}/`
 
 // ---------- zip (deterministic: sorted names, fixed timestamps) ----------
 const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0 } return t })()
