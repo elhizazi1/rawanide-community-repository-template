@@ -1,0 +1,21 @@
+{
+  "protocol": "1.0",
+  "id": "community.example.repository",
+  "name": "My RawanIDE Repository",
+  "publisher": "Your Publisher Name",
+  "description": "My RawanIDE extensions.",
+  "homepageUrl": "https://elhizazi1.github.io/rawanide-community-repository-template/",
+  "repositoryUrl": "https://github.com/elhizazi1/rawanide-community-repository-template",
+  "icon": "https://raw.githubusercontent.com/elhizazi1/rawanide-community-repository-template/main/icon.svg",
+  "i18n": {
+    "ar": {
+      "name": "مستودع إضافاتي",
+      "description": "إضافاتي لتطبيق روان IDE."
+    },
+    "en": {
+      "name": "My RawanIDE Repository",
+      "description": "My extensions for RawanIDE."
+    }
+  },
+  "extensions": []
+}

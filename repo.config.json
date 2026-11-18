@@ -1,0 +1,23 @@
+{
+  "owner": "elhizazi1",
+"repo": "rawanide-community-repository-template",
+"branch": "main",
+  "verification": "",
+  "repository": {
+    "id": "community.example.repository",
+    "name": "My RawanIDE Repository",
+    "publisher": "Your Publisher Name",
+    "description": "My RawanIDE extensions.",
+    "i18n": {
+      "ar": {
+        "name": "مستودع إضافاتي",
+        "description": "إضافاتي لتطبيق روان IDE."
+      },
+      "en": {
+        "name": "My RawanIDE Repository",
+        "description": "My extensions for RawanIDE."
+      }
+    }
+  },
+  "extensions": []
+}
