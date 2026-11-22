@@ -1,1 +1,79 @@
-<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Repository guide</title><link rel="stylesheet" href="../assets/site.css"><main style="max-width:760px;margin:8vh auto;padding:24px"><h1>Repository publisher</h1><p>Set your publisher details in <code>repo.config.json</code>.</p><p><a href="../">Back to repository</a></p></main><!--DATA--><script type="application/json" id="data">{"repository":{"protocol":"1.0","id":"community.example.repository","name":"My RawanIDE Repository","publisher":"Your Publisher Name","description":"My RawanIDE extensions.","homepageUrl":"https://elhizazi1.github.io/rawanide-community-repository-template/","repositoryUrl":"https://github.com/elhizazi1/rawanide-community-repository-template","icon":"https://raw.githubusercontent.com/elhizazi1/rawanide-community-repository-template/main/icon.svg","i18n":{"ar":{"name":"مستودع إضافاتي","description":"إضافاتي لتطبيق روان IDE."},"en":{"name":"My RawanIDE Repository","description":"My extensions for RawanIDE."}},"extensions":[]}}</script><!--/DATA--></html>
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>عن المطور — RawanIDE Community</title>
+<meta name="description" content="About the community repository developer.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="../icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../assets/site.css">
+<script src="../assets/site.js" defer></script>
+<script src="../assets/extras.js" defer></script>
+<script src="../assets/about-profile.js" defer></script>
+</head>
+<body data-page="about" data-root="../">
+<header class="bar">
+  <div class="wrap bar-in">
+    <a class="brand" href="../"><img src="../icon.svg" alt="" width="36" height="36"><span data-i18n="brand">مستودع المجتمع</span></a>
+    <div class="langs" data-langs role="group" aria-label="Language"></div>
+  </div>
+</header>
+<nav class="nav" aria-label="Main">
+  <div class="wrap nav-in">
+    <a href="../#extensions" data-i18n="nav_ext">الإضافات</a>
+    <a href="../#how" data-i18n="nav_how">التثبيت</a>
+    <a href="../#details" data-i18n="nav_details">التفاصيل</a>
+    <a href="../about/" data-i18n="nav_about" aria-current="page">عن المطوّر</a>
+  </div>
+</nav>
+<div class="wrap">
+  <main>
+    <div class="hero">
+      <div class="hero-media"><img src="../assets/developer-avatar.svg" data-profile-avatar alt="" width="128" height="128"></div>
+      <div class="hero-id">
+        <h1 data-i18n="about_name">مطوّر المستودع</h1>
+        <div class="orn" aria-hidden="true"><i></i></div>
+      </div>
+      <p class="lead" data-i18n="about_bio">مطوّر إضافات RawanIDE.</p>
+      <div class="hero-extra">
+        <div class="actions">
+          <a class="btn" href="../#extensions" data-i18n="browse">تصفّح الإضافات</a>
+          <a class="btn ghost" href="../" data-profile-source rel="noopener" data-i18n="foot_source">الكود المصدري</a>
+        </div>
+        <p class="status" data-status data-state="checking" role="status">جارٍ التحقق من MarketPlace…</p>
+      </div>
+    </div>
+
+    <section id="extensions" aria-labelledby="ext-h">
+      <h2 id="ext-h" data-i18n="ext_title">الإضافات</h2>
+      <div class="list" data-ext-list></div>
+    </section>
+
+    <section id="contact" aria-labelledby="c-h">
+      <h2 id="c-h" data-i18n="c_title">تواصل</h2>
+      <div class="cards" data-profile-contacts>
+        <a class="card" href="../" data-profile-link="website" hidden><small data-i18n="c_site">الموقع الشخصي</small><b data-profile-value="website"></b></a>
+        <a class="card" href="../" data-profile-link="email" hidden><small data-i18n="c_mail">البريد</small><b data-profile-value="email"></b></a>
+        <a class="card" href="../" data-profile-link="github" hidden><small>GitHub</small><b data-profile-value="github"></b></a>
+        <a class="card" href="../" data-profile-link="gitlab" hidden><small>GitLab</small><b data-profile-value="gitlab"></b></a>
+      </div>
+    </section>
+  </main>
+</div>
+
+<footer>
+  <div class="wrap foot">
+    <span data-i18n="foot_note">تُتحقَّق سلامة حزم الإضافات باستخدام SHA-256.</span>
+    <span class="links">
+      <a href="../about/" data-i18n="nav_about">عن المطوّر</a>
+      <a href="https://rawanide.elhizazi.me/repositories" rel="noopener" data-i18n="foot_market">MarketPlace</a>
+      <a href="../" data-repository-source-link rel="noopener" hidden>Source</a>
+      
+    </span>
+    <small>© <span data-profile-copyright>Community Developer</span></small>
+  </div>
+</footer>
+<!--DATA--><script type="application/json" id="data">{"repository":{"protocol":"1.0","id":"community.example.repository","name":"My RawanIDE Repository","publisher":"Your Publisher Name","description":"My RawanIDE extensions.","homepageUrl":"https://exampledev.github.io/example-repo/","repositoryUrl":"https://github.com/exampledev/example-repo","icon":"https://raw.githubusercontent.com/exampledev/example-repo/main/icon.svg","i18n":{"ar":{"name":"مستودع إضافاتي","description":"إضافاتي لتطبيق روان IDE."},"en":{"name":"My RawanIDE Repository","description":"My extensions for RawanIDE."}},"extensions":[]},"developer":{"schemaVersion":1,"name":"Your Publisher Name","repositoryName":"My RawanIDE Repository","description":"My RawanIDE extensions.","i18n":{"ar":{"name":"مستودع إضافاتي","description":"إضافاتي لتطبيق روان IDE."}},"avatarUrl":"assets/developer-avatar.svg","website":"","github":"","gitlab":"","email":"","defaultLanguage":"ar"}}</script><!--/DATA--><script>
+(function(){'use strict';var embedded={};try{embedded=JSON.parse(document.getElementById('data').textContent)}catch(e){}var dev=embedded.developer||{},repo=embedded.repository||{};var lang=(localStorage.getItem('rawanide-lang')||navigator.language||'ar').toLowerCase().startsWith('ar')?'ar':'en';document.documentElement.lang=lang;document.documentElement.dir=lang==='ar'?'rtl':'ltr';var ar=lang==='ar';function txt(id,v){document.getElementById(id).textContent=v||''}function safeUrl(u){try{var x=new URL(u,location.href);return (x.protocol==='https:'||((x.protocol==='file:'||x.protocol==='http:')&&u.startsWith('../assets/'))) ? x.href : ''}catch(e){return ''}}function draw(){txt('back-label',ar?'العودة إلى المستودع':'Back to repository');txt('kicker',ar?'عن المطور':'About the developer');txt('developer-name',dev.name||repo.publisher||(ar?'اسم المطور':'Developer'));txt('repository-name',(ar&&dev.i18n&&dev.i18n.ar&&dev.i18n.ar.name)||dev.repositoryName||repo.name);txt('description',(ar&&dev.i18n&&dev.i18n.ar&&dev.i18n.ar.description)||dev.description||repo.description);txt('note',ar?'تُحدَّث معلومات هذه الصفحة من setup.html وdeveloper.json.':'This profile is customized through setup.html and developer.json.');document.title=(dev.name||repo.publisher||'Developer')+' · RawanIDE';var img=document.getElementById('avatar');var src=dev.avatarUrl||'assets/developer-avatar.svg';if(/^assets\/[a-zA-Z0-9_./-]+$/.test(src)&&!src.includes('..'))img.src='../'+src;else if(/^https:\/\//i.test(src))img.src=src;else img.src='../assets/developer-avatar.svg';img.onerror=function(){this.onerror=null;this.src='../assets/developer-avatar.svg'};var links=document.getElementById('links');links.textContent='';[['website',ar?'الموقع الإلكتروني':'Website'],['github','GitHub'],['gitlab','GitLab'],['email',ar?'البريد الإلكتروني':'Email']].forEach(function(p){var v=dev[p[0]];if(!v)return;var a=document.createElement('a');if(p[0]==='email'){if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v))return;a.href='mailto:'+v}else{if(!/^https:\/\//i.test(v))return;a.href=v;a.target='_blank';a.rel='noopener noreferrer'}a.textContent=p[1];links.appendChild(a)})}draw();if(location.protocol!=='file:')fetch('../developer.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).then(function(d){if(d&&d.schemaVersion===1){dev=d;draw()}}).catch(function(){});
+})();</script></body></html>

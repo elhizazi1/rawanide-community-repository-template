@@ -6,14 +6,15 @@
 // index.html, about/index.html and every extension page so the pages also work offline.
 //
 // Usage:  node tools/build.mjs          (no dependencies, Node 18+)
-// Owner/repo are detected automatically from GitHub Actions or the local Git origin. Edit the repository identity, optional verification code, and extensions list.
+// The platform (GitHub or GitLab) and owner/repo are detected from the CI that runs the build or from the local Git origin.
+// Edit the repository identity, optional verification code, and extensions list in repo.config.json.
 
 import fs from 'node:fs'
 import path from 'node:path'
-import zlib from 'node:zlib'
 import crypto from 'node:crypto'
 import { fileURLToPath } from 'node:url'
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
+import { collectFiles, makeZip, zipCrcs, crc32 } from './lib/zip.mjs'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const read = (p) => fs.readFileSync(path.join(root, p), 'utf8')
@@ -34,112 +35,126 @@ const writeJson = (p, v) => { fs.mkdirSync(path.dirname(path.join(root, p)), { r
 
 // Repository identity belongs to each template user, not the template author.
 const REPOSITORY = JSON.parse(read('repo.config.json')).repository
+// developer.json owns display identity only; repo.config.json owns immutable technical ID.
+const developer = JSON.parse(read('developer.json'))
+if (developer.schemaVersion !== 1 || !developer.name || !developer.repositoryName || !developer.description) throw Error('developer.json: invalid or incomplete display identity')
+for (const key of ['avatarUrl','website','github','gitlab']) {
+  const value = developer[key] || ''
+  if (value && !(key === 'avatarUrl' && /^assets\/[a-zA-Z0-9_./-]+$/.test(value) && !value.includes('..')) && (!/^https:\/\//i.test(value) || !URL.canParse(value))) throw Error('developer.json: invalid HTTPS URL for ' + key)
+}
+REPOSITORY.name = developer.repositoryName
+REPOSITORY.publisher = developer.name
+REPOSITORY.description = developer.description
+REPOSITORY.i18n = { ...(REPOSITORY.i18n || {}), ...(developer.i18n || {}) }
 
-// Resolve GitHub identity from the actual checkout, not the template author's settings.
-// GitHub Actions supplies these values. Locally, try the Git origin URL before falling
-// back to explicit config values (useful when building a downloaded ZIP offline).
-function remoteIdentity() {
-  try {
-    const remote = execFileSync('git', ['remote', 'get-url', 'origin'], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim()
-    const match = remote.match(/(?:github\.com[:/])([^/\s:]+)\/([^/\s]+?)(?:\.git)?$/i)
-    return match ? { owner: match[1], repo: match[2] } : null
-  } catch { return null }
-}
-function resolveIdentity(cfg) {
-  const github = process.env.GITHUB_REPOSITORY
-  const ci = process.env.GITHUB_ACTIONS === 'true'
-  if (ci && (!github || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(github))) {
-    throw Error('GITHUB_REPOSITORY is missing or invalid in GitHub Actions')
-  }
-  const match = github && github.match(/^([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)$/)
-  const remote = !match ? remoteIdentity() : null
-  const owner = match?.[1] || remote?.owner || cfg.owner
-  const repo = match?.[2] || remote?.repo || cfg.repo
-  const branch = (ci ? process.env.GITHUB_REF_NAME : undefined) || cfg.branch || 'main'
-  for (const [key, value] of Object.entries({ owner, repo, branch })) {
-    if (!/^[A-Za-z0-9._-]+$/.test(String(value || '')) || String(value).startsWith('YOUR_')) {
-      throw Error(`Cannot determine ${key}. Clone from GitHub or set it in repo.config.json.`)
-    }
-  }
-  return { owner, repo, branch }
-}
 
 const warn = []
 const fail = (m) => { console.error('✗ ' + m); process.exit(1) }
 
 // ---------- config ----------
 const cfg = JSON.parse(read('repo.config.json'))
-let identity
-try { identity = resolveIdentity(cfg) } catch (e) { fail(e.message) }
+
+// ---------- platform ----------
+// GitHub and GitLab differ only in how the checkout is identified and where the files are served from.
+// The CI that runs the build decides first, then "platform" in repo.config.json, then the host of the Git origin.
+const gitOrigin = () => {
+  try { return execFileSync('git', ['remote', 'get-url', 'origin'], { cwd: root, encoding: 'utf8', stdio: ['ignore','pipe','ignore'] }).trim() } catch { return '' }
+}
+const REMOTE = { github: /(?:github\.com[:/])([^/\s:]+)\/([^/\s]+?)(?:\.git)?$/i, gitlab: /(?:gitlab\.com[:/])(.+)\/([^/\s]+?)(?:\.git)?$/i }
+const remoteIdentity = (platform) => { const m = gitOrigin().match(REMOTE[platform]); return m ? { owner: m[1], repo: m[2] } : null }
+const hosting = (cfg.hosting) || {}
+// Hosting URLs can be overridden without changing the repository format or website.
+function hostingUrl(key, fallback) {
+  const value = hosting[key] || fallback
+  const parsed = new URL(value)
+  if (!['https:','http:'].includes(parsed.protocol) || parsed.username || parsed.password) fail(`Invalid hosting.${key}`)
+  return value.replace(/\/$/, '') + (key === 'homepageUrl' ? '/' : '')
+}
+const PLATFORMS = {
+  github: {
+    inCi: () => process.env.GITHUB_ACTIONS === 'true',
+    // Resolve the identity from the actual checkout, not the template author's settings. CI supplies these values;
+    // locally the Git origin is tried before falling back to repo.config.json (useful when building a downloaded ZIP offline).
+    identity(cfg) {
+      const ci = this.inCi()
+      const match = ci ? process.env.GITHUB_REPOSITORY?.match(/^([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)$/) : null
+      if (ci && !match) throw Error('GITHUB_REPOSITORY is missing or invalid')
+      const remote = !match ? remoteIdentity('github') : null
+      const owner = match?.[1] || remote?.owner || cfg.owner
+      const repo = match?.[2] || remote?.repo || cfg.repo
+      const branch = (ci ? process.env.GITHUB_REF_NAME : undefined) || cfg.branch || 'main'
+      for (const [key, value] of Object.entries({ owner, repo, branch })) if (!/^[A-Za-z0-9._-]+$/.test(String(value || '')) || String(value).startsWith('YOUR_')) throw Error(`Configure a valid ${key}`)
+      return { owner, repo, branch }
+    },
+    urls(id) {
+      return {
+        rawBase: hostingUrl('rawBaseUrl', `https://raw.githubusercontent.com/${id.owner}/${id.repo}/${id.branch}`),
+        repositoryUrl: hostingUrl('repositoryUrl', `https://github.com/${id.owner}/${id.repo}`),
+        pagesUrl: hostingUrl('homepageUrl', `https://${id.owner.toLowerCase()}.github.io/${id.repo}/`),
+      }
+    },
+  },
+  gitlab: {
+    inCi: () => process.env.GITLAB_CI === 'true',
+    identity(cfg) {
+      const ci = this.inCi()
+      const match = (ci ? process.env.CI_PROJECT_PATH : undefined)?.match(/^(.+)\/([A-Za-z0-9_.-]+)$/)
+      if (ci && !match) throw Error('CI_PROJECT_PATH is missing or invalid')
+      const remote = !match ? remoteIdentity('gitlab') : null
+      const owner = match?.[1] || remote?.owner || cfg.owner
+      const repo = match?.[2] || remote?.repo || cfg.repo
+      const branch = (match ? process.env.CI_DEFAULT_BRANCH : undefined) || cfg.branch || 'main'
+      if (!owner || !/^[A-Za-z0-9_.\/-]+$/.test(owner) || owner.startsWith('YOUR_')) throw Error('Configure a valid GitLab namespace')
+      for (const [key, value] of Object.entries({ repo, branch })) if (!/^[A-Za-z0-9._-]+$/.test(String(value || '')) || String(value).startsWith('YOUR_')) throw Error(`Configure a valid ${key}`)
+      return { owner, repo, branch }
+    },
+    urls(id) {
+      const pagesBase = `https://${id.owner.split('/')[0]}.gitlab.io/${id.owner.split('/').slice(1).concat(id.repo).join('/')}`
+      const pages = this.inCi() ? process.env.CI_PAGES_URL : undefined
+      const project = this.inCi() ? process.env.CI_PROJECT_URL : undefined
+      return {
+        rawBase: pages ? pages.replace(/\/$/, '') : hostingUrl('rawBaseUrl', pagesBase),
+        repositoryUrl: project || hostingUrl('repositoryUrl', `https://gitlab.com/${id.owner}/${id.repo}`),
+        pagesUrl: pages ? pages.replace(/\/$/, '') + '/' : hostingUrl('homepageUrl', pagesBase + '/'),
+      }
+    },
+  },
+}
+function detectPlatform(cfg) {
+  if (PLATFORMS.gitlab.inCi()) return 'gitlab'
+  if (PLATFORMS.github.inCi()) return 'github'
+  if (cfg.platform !== undefined) {
+    if (!PLATFORMS[cfg.platform]) throw Error('repo.config.json: "platform" must be "github" or "gitlab"')
+    return cfg.platform
+  }
+  const origin = gitOrigin()
+  if (/gitlab\.com[:/]/i.test(origin)) return 'gitlab'
+  if (/github\.com[:/]/i.test(origin)) return 'github'
+  throw Error('Set "platform" to "github" or "gitlab" in repo.config.json')
+}
+// Fail closed before any output is written when existing published identity differs.
+// The guard also verifies pinned .r1 bytes against the published catalog.
+const guard = spawnSync(process.execPath, [path.join(root, 'tools/identity-guard.mjs')], { cwd: root, encoding: 'utf8' })
+if (guard.status !== 0) fail((guard.stderr || guard.stdout || 'Identity guard failed').trim())
+
+let platformName, identity
+try { platformName = detectPlatform(cfg); identity = PLATFORMS[platformName].identity(cfg) } catch (e) { fail(e.message) }
 if (!Array.isArray(cfg.extensions)) fail('repo.config.json: "extensions" must be an array')
 if (!REPOSITORY || !REPOSITORY.id || !REPOSITORY.name || !REPOSITORY.publisher || !REPOSITORY.description) fail('repo.config.json: repository identity is incomplete')
 
-const ID = /^[a-z0-9][a-z0-9._-]{2,127}$/
+// The rules shared with `rawanide-sdk validate --repository` (a byte-identical copy of the SDK's community-rules.json).
+const RULES = JSON.parse(read('tools/community-rules.json'))
+const ID = new RegExp(RULES.idPattern)
+const VERSION = new RegExp(RULES.versionPattern)
 if (!ID.test(REPOSITORY.id)) fail('repository id is invalid')
 
-const BLOCKED = ['TERMINAL_ACCESS', 'PROCESS_EXECUTION', 'DEVICE_FILES_READ', 'DEVICE_FILES_WRITE']
+const BLOCKED = RULES.blockedPermissions
 
 // ---------- links ----------
-const rawBase = `https://raw.githubusercontent.com/${identity.owner}/${identity.repo}/${identity.branch}`
-const repositoryUrl = `https://github.com/${identity.owner}/${identity.repo}`
-const pagesUrl = `https://${identity.owner.toLowerCase()}.github.io/${identity.repo}/`
-
-// ---------- zip (deterministic: sorted names, fixed timestamps) ----------
-const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0 } return t })()
-const crc32 = (buf) => { let c = 0xffffffff; for (const b of buf) c = CRC[(c ^ b) & 0xff] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0 }
-const DOS_TIME = 0
-const DOS_DATE = ((2026 - 1980) << 9) | (10 << 5) | 22
-
-function walk(dir, base = dir) {
-  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
-    const full = path.join(dir, e.name)
-    if (e.isDirectory()) return walk(full, base)
-    if (e.name === '.DS_Store') return []
-    return [{ name: path.relative(base, full).split(path.sep).join('/'), data: fs.readFileSync(full) }]
-  }).sort((a, b) => (a.name < b.name ? -1 : 1))
-}
-
-function makeZip(entries) {
-  const locals = [], central = []
-  let offset = 0
-  for (const { name, data } of entries) {
-    const nameBuf = Buffer.from(name, 'utf8')
-    const packed = zlib.deflateRawSync(data, { level: 9 })
-    const crc = crc32(data)
-    const local = Buffer.alloc(30)
-    local.writeUInt32LE(0x04034b50, 0); local.writeUInt16LE(20, 4); local.writeUInt16LE(0x0800, 6); local.writeUInt16LE(8, 8)
-    local.writeUInt16LE(DOS_TIME, 10); local.writeUInt16LE(DOS_DATE, 12); local.writeUInt32LE(crc, 14)
-    local.writeUInt32LE(packed.length, 18); local.writeUInt32LE(data.length, 22); local.writeUInt16LE(nameBuf.length, 26); local.writeUInt16LE(0, 28)
-    locals.push(local, nameBuf, packed)
-    const c = Buffer.alloc(46)
-    c.writeUInt32LE(0x02014b50, 0); c.writeUInt16LE(20, 4); c.writeUInt16LE(20, 6); c.writeUInt16LE(0x0800, 8); c.writeUInt16LE(8, 10)
-    c.writeUInt16LE(DOS_TIME, 12); c.writeUInt16LE(DOS_DATE, 14); c.writeUInt32LE(crc, 16)
-    c.writeUInt32LE(packed.length, 20); c.writeUInt32LE(data.length, 24); c.writeUInt16LE(nameBuf.length, 28)
-    c.writeUInt32LE(offset, 42)
-    central.push(c, nameBuf)
-    offset += 30 + nameBuf.length + packed.length
-  }
-  const centralBuf = Buffer.concat(central)
-  const end = Buffer.alloc(22)
-  end.writeUInt32LE(0x06054b50, 0); end.writeUInt16LE(entries.length, 8); end.writeUInt16LE(entries.length, 10)
-  end.writeUInt32LE(centralBuf.length, 12); end.writeUInt32LE(offset, 16)
-  return Buffer.concat([...locals, centralBuf, end])
-}
-
+const { rawBase, repositoryUrl, pagesUrl } = PLATFORMS[platformName].urls(identity)
 // A published .r1 is immutable: MarketPlace pins its SHA-256, and compressed bytes can differ between Node versions.
 // If the file already exists and its contents match the extension source, its exact bytes are reused (same SHA-256 everywhere).
 // If the source changed without a version bump, the build stops instead of silently changing a published file.
-function zipCrcs(buf) {
-  const map = new Map()
-  let p = buf.readUInt32LE(buf.length - 6) // central directory offset (archive has no trailing comment)
-  while (buf.readUInt32LE(p) === 0x02014b50) {
-    const crc = buf.readUInt32LE(p + 16), n = buf.readUInt16LE(p + 28), x = buf.readUInt16LE(p + 30), c = buf.readUInt16LE(p + 32)
-    map.set(buf.toString('utf8', p + 46, p + 46 + n), crc)
-    p += 46 + n + x + c
-  }
-  return map
-}
-
 const escHtml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
 // ---------- screenshots ----------
@@ -197,7 +212,7 @@ function olderVersionEntries(manifest, ec) {
   if (!fs.existsSync(base)) return []
   const out = []
   for (const version of fs.readdirSync(base)) {
-    if (version === manifest.version || !/^[0-9A-Za-z][0-9A-Za-z.+_-]{0,63}$/.test(version)) continue
+    if (version === manifest.version || !VERSION.test(version)) continue
     const dir = path.join(base, version)
     const metaPath = path.join(dir, 'marketplace.json')
     if (!fs.statSync(dir).isDirectory() || !fs.existsSync(metaPath)) continue
@@ -244,12 +259,12 @@ function buildExtension(ec, index) {
   if (!ID.test(manifest.id)) fail(`${ec.src}: extension id is invalid`)
   if (seenIds.has(manifest.id)) fail(`${ec.src}: extension id ${manifest.id} is used twice`)
   seenIds.add(manifest.id)
-  if (!/^[0-9A-Za-z][0-9A-Za-z.+_-]{0,63}$/.test(manifest.version)) fail(`${ec.src}: extension version is invalid`)
+  if (!VERSION.test(manifest.version)) fail(`${ec.src}: extension version is invalid`)
   const PACKAGED_RUNTIME = manifest.runtime == null ? null : manifest.runtime // language packs (data only) have no runtime
   // "runtimeOverride" is what repository.json / marketplace.json list when it must differ from the packaged manifest
   // (a published .r1 cannot be edited, so a runtime added to the manifest later can only be listed here until the next version).
   const RUNTIME = ec.runtimeOverride === undefined ? PACKAGED_RUNTIME : ec.runtimeOverride
-  if (RUNTIME !== null && RUNTIME !== 'declarative' && RUNTIME !== 'hosted-js') fail(`${ec.src}: community repositories allow only "declarative", "hosted-js" or no runtime`)
+  if (RUNTIME === null ? !RULES.allowNoRuntime : !RULES.allowedRuntimes.includes(RUNTIME)) fail(`${ec.src}: community repositories allow only ${RULES.allowedRuntimes.map((r) => `"${r}"`).join(', ')}${RULES.allowNoRuntime ? ' or no runtime' : ''}`)
   if (RUNTIME !== PACKAGED_RUNTIME) warn.push(`${manifest.id}: listed runtime "${RUNTIME}" differs from the packaged manifest (${PACKAGED_RUNTIME === null ? 'none' : PACKAGED_RUNTIME}). Put "runtime" in the manifest and publish a new version to make them match.`)
   const ICON_SRC = String(manifest.icon || '')
   if (!ICON_SRC || !fs.existsSync(path.join(root, ec.src, ICON_SRC))) fail(`${ec.src}: manifest icon "${ICON_SRC}" not found`)
@@ -259,9 +274,17 @@ function buildExtension(ec, index) {
   // Screenshots live OUTSIDE the package (extensions/<id>/screenshots/), so adding or changing them never alters the .r1 or its SHA-256.
   const screenshots = resolveScreenshots(ec, manifest.id, where)
   const i18n = manifest.localizedMetadata
-  if (!i18n || !i18n.en) fail(`${ec.src}/manifest.json: localizedMetadata.en is required`)
+  for (const lang of RULES.requiredLocalizedLanguages) if (!i18n || !i18n[lang]) fail(`${ec.src}/manifest.json: localizedMetadata.${lang} is required`)
 
-  const entries = walk(path.join(root, ec.src))
+  // Optional SDK validation before the repository's immutable-archive packaging.
+  // SDK is invoked as an external tool, never copied into this template.
+  if (process.env.RAWANIDE_SDK_VALIDATE === '1') {
+    const sdkCommand = process.env.RAWANIDE_SDK_COMMAND || 'rawanide-sdk'
+    const result = spawnSync(sdkCommand, ['validate', path.join(root, ec.src), '--repository'], { cwd: root, stdio: 'inherit', shell: false })
+    if (result.error) fail(`${ec.src}: SDK validator could not run (${result.error.message})`)
+    if (result.status !== 0) fail(`${ec.src}: SDK validation failed (exit ${result.status})`)
+  }
+  const entries = collectFiles(path.join(root, ec.src))
   const folder = `extensions/${manifest.id}/${manifest.version}`
   const fileName = `${manifest.id}-${manifest.version}.r1`
   fs.mkdirSync(path.join(root, folder), { recursive: true })
@@ -402,8 +425,8 @@ const inject = (page, data) => {
   if (next === html && !html.includes(json)) warn.push(`${page}: no <!--DATA--> marker found`)
   writeFileSafe(full, next)
 }
-inject('index.html', { repository: repositoryJson })
-inject('about/index.html', { repository: repositoryJson }) // developer page: repository data only (extension list + MarketPlace check)
+inject('index.html', { repository: repositoryJson, developer })
+inject('about/index.html', { repository: repositoryJson, developer }) // developer page: repository data only (extension list + MarketPlace check)
 for (const b of built) inject(`${b.folder}/index.html`, { repository: repositoryJson, extension: b.pageExt })
 
 console.log(`✓ repository.json  →  ${repositoryUrl}  (${built.length} extension${built.length === 1 ? '' : 's'})`)

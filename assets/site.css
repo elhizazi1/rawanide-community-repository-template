@@ -54,7 +54,7 @@ a:hover { text-decoration-thickness: 2px; }
 .langs button[aria-pressed="true"] { background: var(--lapis); color: #f3d98b; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .langs button[aria-pressed="true"] { background: var(--gold); color: #1a1405; } }
 
-@media (max-width: 479px) { /* four language buttons (GitLab build) must not squeeze the brand */
+@media (max-width: 479px) { /* language buttons must not squeeze the brand */
   .brand { font-size: 18px; gap: 8px; }
   .brand img { width: 32px; height: 32px; }
   .langs button { padding: 8px 9px; font-size: 12.5px; }

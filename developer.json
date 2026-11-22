@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "name": "Your Publisher Name",
+  "repositoryName": "My RawanIDE Repository",
+  "description": "My RawanIDE extensions.",
+  "i18n": {
+    "ar": {
+      "name": "مستودع إضافاتي",
+      "description": "إضافاتي لتطبيق روان IDE."
+    }
+  },
+  "avatarUrl": "assets/developer-avatar.svg",
+  "website": "",
+  "github": "",
+  "gitlab": "",
+  "email": "",
+  "defaultLanguage": "ar"
+}
