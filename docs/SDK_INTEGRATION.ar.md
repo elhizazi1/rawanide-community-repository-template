@@ -24,7 +24,7 @@ npm install --global @elhizazi1/extension-sdk@1.1.0
 rawanide-sdk help
 rawanide-sdk validate extension-src/my-extension --repository
 rawanide-sdk audit extension-src/my-extension --repository
-RAWANIDE_SDK_VALIDATE=1 node tools/build.mjs
+RAWANIDE_SDK_VALIDATE=1 node tools/build.mjs --extensions
 node --test tools/tests/*.test.mjs
 node tools/tests/verify-build.mjs
 node tools/identity-guard.mjs

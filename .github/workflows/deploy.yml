@@ -1,0 +1,30 @@
+name: Deploy Website
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: community-repository-publish
+  cancel-in-progress: false
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - name: Prepare public website
+        run: |
+          mkdir -p /tmp/rawanide-site
+          cp -r index.html about assets icon.svg repository.json developer.json /tmp/rawanide-site/
+          if [ -d extensions ]; then cp -r extensions /tmp/rawanide-site/; fi
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: /tmp/rawanide-site
+      - uses: actions/deploy-pages@v4
+        id: deployment

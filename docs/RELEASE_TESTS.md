@@ -1,8 +1,8 @@
 # Release verification / التحقق قبل النشر
 
-Run `node tools/build.mjs` then `node tools/tests/verify-build.mjs`. To test the build tooling itself (shared packer, community rules, GitHub/GitLab detection), run `node --test tools/tests/*.test.mjs`.
+Run `node tools/build.mjs --extensions` then `node tools/tests/verify-build.mjs`. To test the build tooling itself (shared packer, community rules, GitHub/GitLab detection), run `node --test tools/tests/*.test.mjs`.
 
-SDK validation is optional for legacy packages. Install the **actual** RawanIDE Extension SDK and run `RAWANIDE_SDK_VALIDATE=1 node tools/build.mjs` for SDK-compatible manifests. Validation failure blocks publication. Do not silently modify old published archives to satisfy newer validation.
+SDK validation is optional for legacy packages. Install the **actual** RawanIDE Extension SDK and run `RAWANIDE_SDK_VALIDATE=1 node tools/build.mjs --extensions` for SDK-compatible manifests. Validation failure blocks publication. Do not silently modify old published archives to satisfy newer validation.
 
 
 ## بالعربية

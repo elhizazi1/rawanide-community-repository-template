@@ -9,7 +9,7 @@ const get=(p)=>JSON.parse(fs.readFileSync(path.join(root,p),'utf8'))
 const cfg=get('repo.config.json')
 const existing=fs.existsSync(path.join(root,'repository.json'))?get('repository.json'):null
 const errors=[]
-if(existing && !(existing.id === 'community.example.repository' && (!existing.extensions || existing.extensions.length === 0) && !existing.verification)){
+if(existing && !(['community.example.repository','community.example.rawanide'].includes(existing.id) && (!existing.extensions || existing.extensions.length === 0) && !existing.verification)){
  if(existing.id!==cfg.repository.id) errors.push(`Repository ID mismatch: published=${existing.id}, config=${cfg.repository.id}`)
  if(existing.verification && existing.verification!==cfg.verification) errors.push('Published verification token differs from config')
  for(const e of existing.extensions||[]){

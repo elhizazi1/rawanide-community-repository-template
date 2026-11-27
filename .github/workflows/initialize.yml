@@ -1,0 +1,41 @@
+name: Initialize Repository
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: community-repository-publish
+  cancel-in-progress: false
+
+jobs:
+  run:
+    if: github.ref == 'refs/heads/main' && github.repository != 'elhizazi1/rawanide-community-repository-template' && (github.event_name == 'workflow_dispatch' || github.event.created == true)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node tools/initialize.mjs
+      - name: Commit generated files
+        shell: bash
+        run: |
+          git fetch origin main
+          if [[ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]]; then
+            echo "::error::New commits arrived during the build. Run the workflow again from main."
+            exit 1
+          fi
+          git add -- repo.config.json
+          if ! git diff --cached --quiet; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git commit -m 'chore: publish community repository [skip ci]'
+            git push origin HEAD:main
+          else
+            echo 'No generated changes to publish.'
+          fi

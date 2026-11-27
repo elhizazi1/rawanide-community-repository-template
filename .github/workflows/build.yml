@@ -1,0 +1,60 @@
+name: Build Extensions
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: community-repository-publish
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      # Optional repository variable; default keeps SDK installation unnecessary.
+      RAWANIDE_SDK_VALIDATE: ${{ vars.RAWANIDE_SDK_VALIDATE || '0' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install SDK 1.1.0 for optional validation
+        if: env.RAWANIDE_SDK_VALIDATE == '1'
+        run: npm install --global @elhizazi1/extension-sdk@1.1.0
+      - name: Test repository tooling
+        shell: bash
+        run: |
+          if [[ "$RAWANIDE_SDK_VALIDATE" == '1' ]]; then
+            export RAWANIDE_TEST_SDK_COMMAND=rawanide-sdk
+          fi
+          node --test tools/tests/*.test.mjs
+      - name: Build repository and packages
+        run: node tools/build.mjs --extensions
+      - name: Verify catalog and archives
+        run: node tools/tests/verify-build.mjs
+      - name: Commit generated files
+        shell: bash
+        run: |
+          git fetch origin main
+          if [[ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]]; then
+            echo "::error::New commits arrived during the build. Run the workflow again from main."
+            exit 1
+          fi
+          git add -A -- repository.json index.html about
+          if [[ -d extensions ]]; then
+            git add -A -- extensions
+          fi
+          if ! git diff --cached --quiet; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git commit -m 'chore: publish community repository [skip ci]'
+            git push origin HEAD:main
+          else
+            echo 'No generated changes to publish.'
+          fi

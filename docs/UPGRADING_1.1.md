@@ -8,7 +8,7 @@ Copy/merge these updated files / انسخ أو ادمج الملفات المح�
 
 - `tools/build.mjs`
 - `tools/tests/builder.test.mjs` and `tools/tests/sdk-1.1.test.mjs`
-- `.github/workflows/publish.yml` for GitHub, or `.gitlab-ci.yml` for GitLab; preserve your custom CI settings
+- `.github/workflows/ (remove obsolete publish.yml)` for GitHub, or `.gitlab-ci.yml` for GitLab; preserve your custom CI settings
 - `docs/SDK_INTEGRATION.md`, `docs/SDK_INTEGRATION.ar.md`, `docs/workspace-search-1.1.md`, `docs/workspace-search-1.1.ar.md`, `docs/ARCHITECTURE.md`, `docs/RELEASE_TESTS.md`
 - The `examples/hosted-js-project-search/` folder and updated README sections if wanted
 
@@ -20,7 +20,7 @@ Run / شغّل:
 
 ```sh
 node --test tools/tests/*.test.mjs
-node tools/build.mjs
+node tools/build.mjs --extensions
 node tools/tests/verify-build.mjs
 node tools/identity-guard.mjs
 ```

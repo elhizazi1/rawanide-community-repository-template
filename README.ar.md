@@ -25,7 +25,7 @@
 
 مشروع مفتوح لنشر إضافات RawanIDE بصيغة `.r1` وفهرستها على **GitHub**. يبني فهرسًا (`repository.json`) وحزمة `.r1` لكل إصدار من كل إضافة، وموقعًا قابلًا للتخصيص يضم صفحات الإضافات وصفحة «عن المطور». وتتيح `setup.html` تحرير الملف الشخصي العام محليًا، وتتولى GitHub Actions أتمتة النشر. لا يتطلب إنشاء تطبيق Android جديد.
 
-> 🧩 ابنِ بالـ SDK ➜ 📁 ضع المصدر في `extension-src/` ➜ 🔨 `node tools/build.mjs` ➜ 🚀 انشر ➜ 📲 يضيف المستخدمون مستودعك
+> 🧩 ابنِ بالـ SDK ➜ 📁 ضع المصدر في `extension-src/` ➜ 🔨 `node tools/build.mjs --extensions` ➜ 🚀 انشر ➜ 📲 يضيف المستخدمون مستودعك
 
 | أنت… | اقرأ |
 | :-- | :-- |
@@ -50,11 +50,9 @@
 
 ## ⚡ بداية سريعة
 
-1. أنشئ **مستودعًا/مشروعًا جديدًا على GitHub** باستخدام القالب أو استيراد ملفاته. أبقِ المستودع عامًا: ينزّل RawanIDE الملف `repository.json` والحزم من `raw.githubusercontent.com` دون تسجيل دخول.
-2. افتح `repo.config.json` ويمكنك ضبط `repository.id` على **معرّف فريد** قبل أول نشر (من 3 إلى 64 حرفًا إنجليزيًا صغيرًا أو رقمًا أو `.` أو `_` أو `-`، دون المعرّفات المحجوزة). إذا تركت القيمة الافتراضية، يولّد البناء الأول معرّفًا من هوية المستودع الفعلية ويحفظه تلقائيًا. يُكتشف `owner` و`repo` و`branch` من GitHub Actions أو من المستودع البعيد `origin` في Git؛ أما القيم في الملف فمجرد احتياط (مثلًا عند البناء من ملف ZIP منزَّل). وإذا احتجت إلى ضبطها فاستخدم `owner` لـ اسم حسابك أو مؤسستك في GitHub و`repo` لـ اسم المستودع.
-3. افتح `setup.html` محليًا في المتصفح، وأدخل بيانات المطور والمستودع المعروضة، ثم صدّر `developer.json` وضعه في جذر المشروع. وللصورة الشخصية استخدم ملفًا داخل `assets/` أو رابط HTTPS.
-4. أضف إضافاتك: راجع [إضافة إضافة](#إضافة-إضافة).
-5. [ابنِ وتحقق](#البناء-والتحقق) ثم [انشر](#النشر-على-github).
+1. أنشئ مستودعًا عامًا من **Use this template** وانتظر انتهاء **Initialize Repository**؛ شغّله يدويًا مرة واحدة إذا لم يبدأ تلقائيًا.
+2. اتبع [التسجيل في الماركت بليس](#النشر-على-github) لتخصيص المعرف وإضافة رمز التحقق وتطبيق الإعدادات. لا تحتاج إلى أي إضافة في هذه المرحلة.
+3. بعد نجاح التحقق، اتبع [إضافة إضافة](#إضافة-إضافة) واختر البناء عبر GitHub Actions أو الطرفية.
 
 > 💡 **نصيحة:** لا تحتاج أداة البناء إلى حزم npm، فيكفي Node.js وحده حتى على Termux.
 
@@ -115,7 +113,7 @@
 يُنصح باستخدام Node.js 22 (وهو ما يستخدمه CI)؛ ولا تحتاج أداة البناء إلى حزم npm. من جذر المشروع شغّل:
 
 ```sh
-node tools/build.mjs
+node tools/build.mjs --extensions
 node tools/tests/verify-build.mjs
 ```
 
@@ -129,7 +127,7 @@ extensions/<id>/<version>/<id>-<version>.r1
 extensions/<id>/<version>/marketplace.json, icon, index.html
 ```
 
-وإذا لم يعد `.r1` موجود يطابق مصدره، يتوقف البناء ويطلب منك رفع رقم الإصدار. ملف `repository.json` المولَّد حديثًا لا يُسجَّل تلقائيًا في Marketplace. عند الدفع إلى الفرع الرئيسي يعمل سير العمل على إيداع (commit) الملفات المولَّدة نيابةً عنك. وإن بنيت محليًا أيضًا فأودِع الملفات المولَّدة كذلك.
+وإذا لم يعد `.r1` موجود يطابق مصدره، يتوقف البناء ويطلب منك رفع رقم الإصدار. ملف `repository.json` المولَّد حديثًا لا يُسجَّل تلقائيًا في Marketplace. عند تشغيل سير العمل يدويًا يعمل على إيداع (commit) الملفات المولَّدة نيابةً عنك. وإن بنيت محليًا أيضًا فأودِع الملفات المولَّدة كذلك.
 
 ولتدقيق الهوية وسلامة الحزم دون تغيير أي ملف، شغّل `node tools/identity-guard.mjs`.
 
@@ -142,7 +140,7 @@ RawanIDE Extension SDK **أداة npm مستقلة**. ثبّتها أولًا ل
 ```sh
 npm install --global @elhizazi1/extension-sdk@1.1.0
 rawanide-sdk help
-RAWANIDE_SDK_VALIDATE=1 node tools/build.mjs
+RAWANIDE_SDK_VALIDATE=1 node tools/build.mjs --extensions
 node tools/tests/verify-build.mjs
 ```
 
@@ -152,11 +150,56 @@ node tools/tests/verify-build.mjs
 
 ## 🚀 النشر على GitHub
 
-يؤدي الدفع إلى `main` (أو تشغيل سير العمل يدويًا) إلى تشغيل `.github/workflows/publish.yml`. فيبني المستودع، ويتحقق من الفهرس والأرشيفات، ويودِع الملفات المولَّدة، ويكتب حالة GitHub Pages في ملخص المهمة.
+### التسجيل في الماركت بليس
 
-**إعداد لمرة واحدة:** فعّل GitHub Pages من **Settings ← Pages ← Deploy from a branch ← `main` ← `/(root)` ← Save**. لا يستطيع سير العمل تغيير هذا الإعداد نيابةً عنك.
+1. أنشئ مستودعًا عامًا عبر **Use this template** وانتظر **Initialize Repository**. إذا لم يرسل GitHub حدث الدفع الأول، شغّله يدويًا مرة واحدة. يضبط المالك والمستودع والفرع والروابط في `repo.config.json` فقط.
+2. غيّر `example` في `community.example.rawanide` أو اختر معرفًا فريدًا آخر. خصص بيانات العرض في `developer.json`. سجّل الدخول إلى الماركت بليس عبر Google واربط GitHub، ثم أدخل المعرف المختار ورابط المستودع العام في مستودعاتك؛ لا حاجة إلى بناء أولي.
+3. ضع رمز `rwm-...` في حقل `verification` في جذر `repo.config.json` واحفظ التعديلات، ثم اختر **Configure Repository** على main أو طريقة الطرفية أدناه. يحافظ على قائمة الإضافات.
+4. تحقق من `repository.json` ثم اضغط **Verify now**. لا يشترط Pages.
+5. طور الإضافات واحفظ التعديلات وارفعها، ثم اختر **Build Extensions** أو طريقة الطرفية أدناه لتحديث الحزم وقائمة الإضافات وبيانات الصفحات دون تغيير هوية الفهرس.
+6. لنشر الموقع اختياريًا: Settings ← Pages ← Source ← **GitHub Actions** ثم شغّل **Deploy Website** يدويًا. لا يبني ولا يعدّل ملفات المصدر.
 
-الروابط والإصدارات واستكشاف المشكلات في [`docs/PLATFORM.md`](docs/PLATFORM.md).
+انتظر انتهاء كل عملية قبل التعديل. إذا وصلت إيداعات جديدة تتوقف عملية الكتابة دون استبدالها. اجلب الإيداعات المولدة محليًا عبر `git pull --ff-only`. راجع [دليل المنصة](docs/PLATFORM.md).
+
+
+### 💻 Termux أو طرفية الحاسوب — بديل GitHub Actions
+
+ثبّت Git وNode.js 22 (موصى به)، واستنسخ مستودعك بعد انتهاء التهيئة. في Termux يمكن تثبيتهما عبر `pkg install git nodejs` (قد يختلف إصدار Node.js المتاح). تعمل أوامر Node وGit نفسها في طرفيات Windows وLinux وmacOS. نفّذ من جذر المستودع وعلى فرع main، ولا تشغّل Workflow بالتوازي.
+
+قبل تعديل الملفات، تأكد من نظافة النسخة المحلية ونفّذ `git pull --ff-only origin main`. إذا فشل الدمج، راجع الاختلافات ولا تستخدم الرفع الإجباري.
+
+**مرحلة التخصيص:** بعد تعديل المعرف وإضافة رمز التحقق في `repo.config.json` وتخصيص `developer.json` عند الحاجة:
+
+```sh
+node tools/build.mjs --configure
+```
+
+راجع `git diff` ثم احفظ ملفات الإعدادات والنتائج المولدة وارفعها:
+
+```sh
+git add -- repo.config.json developer.json repository.json index.html about
+git commit -m "Configure repository"
+git push origin main
+```
+
+بعد نجاح الرفع اضغط **Verify now** في Marketplace. لا تشغّل Configure Repository مرة أخرى لمجرد تحديث الإضافات.
+
+**مرحلة الإضافات:** بعد التحقق، عدّل مصادر الإضافات وقائمتها في `repo.config.json`، ثم:
+
+```sh
+node tools/build.mjs --extensions
+node tools/tests/verify-build.mjs
+```
+
+راجع التغييرات، وأضف ملفات المصدر والحزم والصفحات المولدة (وأي أصول مقصودة) إلى Git، ثم احفظ وارفع:
+
+```sh
+git add -- repo.config.json extension-src extensions repository.json index.html about
+git commit -m "Update extensions"
+git push origin main
+```
+
+لا حاجة لتشغيل Build Extensions بعد البناء المحلي. لا يؤدي Push إلى بناء أو نشر تلقائي. نشر الموقع اختياري عبر Deploy Website. إذا رفض Git الرفع بسبب تعديلات أحدث، راجعها وادمجها وأعد توليد النتائج عند الحاجة.
 
 <a id="تخصيص-الموقع"></a>
 
@@ -169,7 +212,7 @@ node tools/tests/verify-build.mjs
 ## 🔐 هوية المستودع والحزم المنشورة
 
 - لا تستخدم `repository.id` أو رمز توثيق خاصًا بناشر آخر.
-- عندما تطالب بمستودعك في RawanIDE Marketplace، ضع رمز التوثيق الذي تتلقاه في الحقل `verification` داخل `repo.config.json`. يمكن إضافة الرمز لأول مرة بعد البناء الأول؛ أعد تشغيل البناء وانتظر نشر `repository.json` قبل التحقق. لا تعدّل الملف المولّد يدويًا. وبعد التسجيل **لا تغيّر** معرّف المستودع أو رمز التوثيق. واتبع إجراءات التسجيل الحالية في Marketplace.
+- عندما تطالب بمستودعك في RawanIDE Marketplace، ضع رمز التوثيق الذي تتلقاه في الحقل `verification` داخل `repo.config.json`. أضف الرمز قبل تشغيل Configure Repository لأول مرة؛ شغّل Configure Repository وانتظر نشر `repository.json` قبل التحقق. لا تعدّل الملف المولّد يدويًا. وبعد التسجيل **لا تغيّر** معرّف المستودع أو رمز التوثيق. واتبع إجراءات التسجيل الحالية في Marketplace.
 - يجب أن تبقى حزم `.r1` المنشورة سابقًا مطابقة بايتًا ببايت، وإلا ستختلف بصمة SHA-256.
 - حافظ على تخصيص هذا القالب لمنصة GitHub، ولا تنسخ إعدادات منصة أخرى.
 

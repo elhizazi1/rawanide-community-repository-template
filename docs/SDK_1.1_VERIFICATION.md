@@ -18,7 +18,7 @@ The integration checks cover API 1.0 and 1.1 manifests, SDK/repository archive p
 Then build the repository and verify its generated outputs:
 
 ```sh
-node tools/build.mjs
+node tools/build.mjs --extensions
 node tools/tests/verify-build.mjs
 ```
 

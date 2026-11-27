@@ -1,46 +1,12 @@
-# Publishing on GitHub
+# GitHub workflow lifecycle
 
-This template targets GitHub only. For the overall flow see the [README](../README.md).
+| Workflow | Trigger | Writes |
+|---|---|---|
+| Initialize Repository | Initial main branch creation push; manual fallback | repo.config.json only, once while owner/repo are placeholders |
+| Configure Repository | Manual | repository.json identity and embedded profile pages; preserves extensions |
+| Build Extensions | Manual | packages, extension catalog list and embedded pages; preserves catalog identity |
+| Deploy Website | Manual | Pages artifact only |
 
-## What the workflow does
+Follow [Marketplace registration](../README.md#marketplace-registration) or [Arabic instructions](../README.ar.md). Use Settings → Pages → Source → GitHub Actions for manual deployment. The public catalog is served at `https://raw.githubusercontent.com/<owner>/<repo>/main/repository.json` independently of Pages. Workflow permissions must allow contents writes for the first three jobs. Never force push generated commits. All jobs share one concurrency group; GitHub can replace a pending run, so wait for each to finish. Initialization does not run on ordinary pushes; if the template creation event is not delivered, use the manual fallback.
 
-`.github/workflows/publish.yml` runs only when manually started on `main` (`workflow_dispatch`). It:
-
-1. runs `node tools/build.mjs` (Node.js 22) and `node tools/tests/verify-build.mjs`;
-2. commits the generated files (`repository.json`, `index.html`, `about/`, `extensions/`) as `github-actions[bot]` with `[skip ci]`;
-3. writes the GitHub Pages status to the job summary (it warns if Pages could not be confirmed).
-
-## One-time setup
-
-1. Create a **public** repository from the template. RawanIDE downloads `repository.json` and the packages from `raw.githubusercontent.com` without signing in.
-2. Fill in `repo.config.json`, `developer.json`, and your extensions (see the README), then push to `main` and manually run the workflow. Wait for success before editing again.
-3. Enable GitHub Pages: **Settings → Pages → Deploy from a branch → `main` → `/(root)` → Save**. The workflow cannot change this setting. Until Pages has deployed, the website can show 404 even though the build succeeded.
-4. If the commit step fails with a permission error, check **Settings → Actions → General → Workflow permissions**: the workflow needs to push to the repository.
-
-## URLs
-
-| What | Address |
-| :-- | :-- |
-| Repository link (shown on the website, used in the app) | `https://github.com/<owner>/<repo>` |
-| Catalog file | `https://raw.githubusercontent.com/<owner>/<repo>/<branch>/repository.json` |
-| Website | `https://<owner>.github.io/<repo>/` (owner in lowercase) |
-
-`owner`, `repo`, and `branch` come from GitHub Actions (or the Git `origin` remote when building locally). `hosting` in `repo.config.json` can override the generated URLs.
-
-## Releasing a new version
-
-Bump `version` in the extension's manifest, update `releaseDate` and `changelog` for it in `repo.config.json`, and push, then manually run the workflow. The new `.r1` is created once; earlier versions stay listed and are never rewritten. Never edit a published `.r1`.
-
-## Registering with the RawanIDE Marketplace
-
-Follow the [Marketplace registration steps](../README.md#marketplace-registration). Put the verification code you receive when claiming the repository in `verification` in `repo.config.json`, commit, run the workflow manually, and wait for success before verifying. After registration, never change `repository.id` or the verification code. See [`IDENTITY_SAFETY.md`](IDENTITY_SAFETY.md).
-
----
-
-## بالعربية
-
-- **سير العمل:** يعمل `.github/workflows/publish.yml` يدويًا فقط على `main`: يبني ويتحقق، ثم يودِع الملفات المولَّدة (`repository.json` و`index.html` و`about/` و`extensions/`)، ويكتب حالة GitHub Pages في ملخص المهمة.
-- **الإعداد لمرة واحدة:** أنشئ مستودعًا **عامًا**، واملأ `repo.config.json` و`developer.json` والإضافات، وادفع إلى `main`، وشغّل Actions يدويًا وانتظر النجاح، ثم فعّل Pages من **Settings ← Pages ← Deploy from a branch ← `main` ← `/(root)` ← Save**. قد يظهر الموقع بخطأ 404 إلى أن ينتهي نشر Pages. وإذا فشلت خطوة الإيداع بخطأ صلاحيات فراجع **Settings ← Actions ← General ← Workflow permissions**.
-- **الروابط:** رابط المستودع `https://github.com/<owner>/<repo>`؛ ملف الفهرس `https://raw.githubusercontent.com/<owner>/<repo>/<branch>/repository.json`؛ الموقع `https://<owner>.github.io/<repo>/`.
-- **إصدار جديد:** ارفع `version` في Manifest الإضافة، وحدّث `releaseDate` و`changelog` في `repo.config.json`، وادفع وشغّل Actions يدويًا. لا تعدّل `.r1` منشورًا أبدًا.
-- **التسجيل في Marketplace:** ضع رمز التوثيق في `verification` داخل `repo.config.json`، ولا تغيّر `repository.id` أو الرمز بعد التسجيل.
+Local commands: `node tools/build.mjs --configure` then `node tools/build.mjs --extensions`. The latter requires a configured catalog with a verification code, but does not query Marketplace for actual verification status. Never change a published ID, token or package bytes.

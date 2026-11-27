@@ -25,7 +25,7 @@
 
 An open starting point for publishing and cataloging RawanIDE `.r1` extensions on **GitHub**. It builds a catalog (`repository.json`), one packaged `.r1` for every extension version, and a customizable website with extension pages and an About page. `setup.html` is a local editor for the public profile, and GitHub Actions automates publishing. No new Android app is required.
 
-> 🧩 Build with the SDK ➜ 📁 put the source in `extension-src/` ➜ 🔨 `node tools/build.mjs` ➜ 🚀 publish ➜ 📲 users add your repository
+> 🧩 Build with the SDK ➜ 📁 put the source in `extension-src/` ➜ 🔨 `node tools/build.mjs --extensions` ➜ 🚀 publish ➜ 📲 users add your repository
 
 | You are… | Read |
 | :-- | :-- |
@@ -50,11 +50,9 @@ Add a repository only if you trust its publisher, and review the permissions lis
 
 ## ⚡ Quick start
 
-1. Create a **new GitHub repository/project** from this template (or import the files). Keep the repository public: RawanIDE downloads `repository.json` and the packages from `raw.githubusercontent.com` without signing in.
-2. Edit `repo.config.json`: optionally set `repository.id` to a **unique ID** before first publication (3–64 lowercase letters, digits, `.`, `_`, `-`; reserved Marketplace IDs are not allowed). If left at the template default, the first build generates and saves an ID from the actual repository identity. `owner`, `repo`, and `branch` are detected from GitHub Actions or from the Git `origin` remote; the values in the file are only a fallback (for example when building from a downloaded ZIP). If you do need to set them, `owner` is your GitHub username or organization and `repo` is your repository name.
-3. Open `setup.html` locally in a browser, enter the developer and repository display information, export `developer.json`, and put it in the repository root. For the avatar, use a file under `assets/` or an HTTPS link.
-4. Add your extensions: see [Add an extension](#add-an-extension).
-5. [Build and verify](#build-and-verify), then [publish](#publish-on-github).
+1. Create a public repository using **Use this template** and wait for **Initialize Repository**; run it manually once if it does not start automatically.
+2. Follow [Marketplace registration](#marketplace-registration) to customize the ID, add the verification code and configure the catalog. No extensions are needed yet.
+3. After verification, follow [Add an extension](#add-an-extension) and choose GitHub Actions or a local terminal to build.
 
 > 💡 **Tip:** the builder has no npm dependencies, so Node.js alone is enough, even in Termux.
 
@@ -115,7 +113,7 @@ Add a repository only if you trust its publisher, and review the permissions lis
 Node.js 22 is recommended (the CI uses it); the builder has no npm dependencies. From the repository root:
 
 ```sh
-node tools/build.mjs
+node tools/build.mjs --extensions
 node tools/tests/verify-build.mjs
 ```
 
@@ -129,7 +127,7 @@ extensions/<id>/<version>/<id>-<version>.r1
 extensions/<id>/<version>/marketplace.json, icon, index.html
 ```
 
-If an existing `.r1` no longer matches its source, the build stops and asks you to bump the version. A newly generated `repository.json` is not automatically registered with the Marketplace. When you push to your main branch, the workflow commits the generated files for you. If you also build locally, commit the generated files as well.
+If an existing `.r1` no longer matches its source, the build stops and asks you to bump the version. A newly generated `repository.json` is not automatically registered with the Marketplace. When you manually run the workflow, it commits the generated files for you. If you also build locally, commit the generated files as well.
 
 To audit identity and package integrity without changing any file, run `node tools/identity-guard.mjs`.
 
@@ -144,7 +142,7 @@ Install SDK 1.1.0 from the public npm registry using the command below. An offli
 ```sh
 npm install --global @elhizazi1/extension-sdk@1.1.0
 rawanide-sdk help
-RAWANIDE_SDK_VALIDATE=1 node tools/build.mjs
+RAWANIDE_SDK_VALIDATE=1 node tools/build.mjs --extensions
 node tools/tests/verify-build.mjs
 ```
 
@@ -154,11 +152,56 @@ The environment-variable syntax works in Termux and other POSIX shells. SDK vali
 
 ## 🚀 Publish on GitHub
 
-Pushing to `main` (or running the workflow manually) triggers `.github/workflows/publish.yml`. It builds the repository, verifies the catalog and archives, commits the generated files, and writes the GitHub Pages status to the job summary.
+### Marketplace registration
 
-**One-time setup:** enable GitHub Pages under **Settings → Pages → Deploy from a branch → `main` → `/(root)` → Save**. The workflow cannot change this setting for you.
+1. Create a public repository using **Use this template**. Wait for **Initialize Repository** to finish; if GitHub does not dispatch the initial push, run it manually once. It only fills owner, repo, branch and hosting URLs in `repo.config.json`.
+2. Replace `example` in `community.example.rawanide` (or choose another unique ID). Customize `developer.json` for display identity. Sign in to Marketplace with Google and link GitHub. In **Your repositories**, enter the chosen ID and public GitHub repository URL; no initial build is needed.
+3. Put the issued `rwm-...` code in the root `verification` field of `repo.config.json`, commit all edits, then choose **Configure Repository** on main or the local terminal method below. It updates repository identity and preserves the extension list.
+4. Check the root `repository.json`, then select **Verify now** in Marketplace. Pages is not required.
+5. Develop extensions, commit and push, then choose **Build Extensions** or the local terminal method below. It updates packages, extension listings and embedded page data without changing catalog identity.
+6. Optional website: Settings → Pages → Source → **GitHub Actions**, then manually run **Deploy Website**. No build or source commit occurs during deployment.
 
-URLs, releases, and troubleshooting are in [`docs/PLATFORM.md`](docs/PLATFORM.md).
+All workflows share a concurrency group. Wait for completion before editing; if new commits arrive, the writing workflow refuses to overwrite them. Pull generated commits locally (`git pull --ff-only`). See [platform guide](docs/PLATFORM.md).
+
+
+### 💻 Termux or desktop terminal — alternative to GitHub Actions
+
+Install Git and Node.js (22 recommended), then clone your repository after initialization finishes. On Termux, use `pkg install git nodejs` (the available Node.js version may vary). The Node and Git commands also work in Windows, Linux and macOS terminals. Run from the repository root on main; do not run a writing workflow concurrently.
+
+Before editing, ensure your working tree is clean and run `git pull --ff-only origin main`. If it fails, review the divergence; never force push.
+
+**Configure once:** after editing the ID and verification code in `repo.config.json` and customizing `developer.json` if needed:
+
+```sh
+node tools/build.mjs --configure
+```
+
+Review `git diff`, then commit and push the configuration and generated files:
+
+```sh
+git add -- repo.config.json developer.json repository.json index.html about
+git commit -m "Configure repository"
+git push origin main
+```
+
+After the push succeeds, select **Verify now** in Marketplace. Do not run Configure Repository again just to update extensions.
+
+**Build extensions:** after verification, edit extension sources and their entries in `repo.config.json`, then run:
+
+```sh
+node tools/build.mjs --extensions
+node tools/tests/verify-build.mjs
+```
+
+Review changes and stage sources, generated packages and pages (and any other intended assets), then commit and push:
+
+```sh
+git add -- repo.config.json extension-src extensions repository.json index.html about
+git commit -m "Update extensions"
+git push origin main
+```
+
+Do not run Build Extensions again after a local build. A push does not automatically build or deploy. Website deployment remains optional via Deploy Website. If Git rejects a push because newer commits arrived, review and integrate them, then regenerate as needed.
 
 <a id="customize-the-website"></a>
 
@@ -171,7 +214,7 @@ Use `setup.html` to edit the profile and export `developer.json`. The public web
 ## 🔐 Identity and published packages
 
 - Never reuse another publisher's `repository.id` or verification token.
-- When you claim the repository in the RawanIDE Marketplace, put the verification code you receive in `verification` in `repo.config.json`. The first code can be added after the initial build; run the workflow again and wait for the generated `repository.json` to be published before verifying. Do not edit `repository.json` manually. After registration, do **not** change the repository ID or the verification token. Follow the current Marketplace registration process.
+- When you claim the repository in the RawanIDE Marketplace, put the verification code you receive in `verification` in `repo.config.json`. Add the code before the first Configure Repository run; run Configure Repository and wait for the generated `repository.json` to be published before verifying. Do not edit `repository.json` manually. After registration, do **not** change the repository ID or the verification token. Follow the current Marketplace registration process.
 - Previously published `.r1` packages must remain byte-identical; changing them breaks their SHA-256 integrity.
 - Keep this template specific to GitHub; do not copy configuration from another platform.
 

@@ -19,10 +19,11 @@ function repository(kind = 'search', apiVersion) {
   const manifest = JSON.parse(fs.readFileSync(path.join(src, 'manifest.json'), 'utf8'))
   if (apiVersion) { manifest.apiVersion = apiVersion; fs.writeFileSync(path.join(src, 'manifest.json'), JSON.stringify(manifest, null, 2)) }
   const config = JSON.parse(fs.readFileSync(path.join(dir, 'repo.config.json'), 'utf8'))
-  config.owner = 'example'; config.repo = 'extensions'; config.branch = 'main'
+  config.verification = 'rwm-' + 'A'.repeat(24); config.repository.id = 'community.sdk-test.rawanide'; config.owner = 'example'; config.repo = 'extensions'; config.branch = 'main'
   config.extensions = [{ src: 'extension-src/example', releaseDate: '2026-11-22', changelog: { en: 'Compatibility check.', ar: 'فحص التوافق.' }, tags: [] }]
   fs.writeFileSync(path.join(dir, 'repo.config.json'), JSON.stringify(config, null, 2))
   const run = (args, extra = {}) => spawnSync(process.execPath, args, { cwd: dir, encoding: 'utf8', env: { ...cleanEnv(), ...extra } })
+  const configured = run(['tools/build.mjs','--configure']); assert.equal(configured.status,0,configured.stderr)
   const archive = path.join(dir, 'extensions', manifest.id, manifest.version, `${manifest.id}-${manifest.version}.r1`)
   return { dir, src, manifest, archive, run, dispose: () => fs.rmSync(dir, { recursive: true, force: true }) }
 }

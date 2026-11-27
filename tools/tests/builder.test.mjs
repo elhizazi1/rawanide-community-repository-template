@@ -56,6 +56,7 @@ function build({ env = 'none', config = {}, mutateManifest } = {}) {
   fs.rmSync(path.join(temp, 'repository.json'), { force: true })
   const cfg = JSON.parse(fs.readFileSync(path.join(temp, 'repo.config.json'), 'utf8'))
   Object.assign(cfg, { owner: 'test', repo: 'repo' }, config)
+  cfg.repository.id = 'community.test.rawanide'; cfg.verification = 'rwm-' + 'A'.repeat(24)
   cfg.extensions = [{ src: 'extension-src/parity-extension', releaseDate: '2026-11-20', changelog: { en: 'Test.' }, tags: [] }]
   fs.writeFileSync(path.join(temp, 'repo.config.json'), JSON.stringify(cfg, null, 2))
   fs.cpSync(fixture, path.join(temp, 'extension-src/parity-extension'), { recursive: true })
@@ -64,7 +65,8 @@ function build({ env = 'none', config = {}, mutateManifest } = {}) {
     const manifest = JSON.parse(fs.readFileSync(file, 'utf8')); mutateManifest(manifest); fs.writeFileSync(file, JSON.stringify(manifest, null, 2))
   }
   const clean = Object.fromEntries(Object.entries(process.env).filter(([k]) => !CI_VARS.test(k)))
-  const result = spawnSync(process.execPath, ['tools/build.mjs'], { cwd: temp, encoding: 'utf8', env: { ...clean, ...PLATFORM_ENV[env] } })
+  const setup = spawnSync(process.execPath, ['tools/build.mjs','--configure'], { cwd: temp, encoding: 'utf8', env: { ...clean, ...PLATFORM_ENV[env] } })
+  const result = setup.status !== 0 ? setup : spawnSync(process.execPath, ['tools/build.mjs'], { cwd: temp, encoding: 'utf8', env: { ...clean, ...PLATFORM_ENV[env] } })
   const archive = path.join(temp, 'extensions/local.parity-fixture/1.0.0/local.parity-fixture-1.0.0.r1')
   const catalog = fs.existsSync(path.join(temp, 'repository.json')) ? JSON.parse(fs.readFileSync(path.join(temp, 'repository.json'), 'utf8')) : null
   return { result, catalog, archive: fs.existsSync(archive) ? fs.readFileSync(archive) : null, cleanup: () => fs.rmSync(temp, { recursive: true, force: true }) }
@@ -117,31 +119,21 @@ test('the builder enforces the same community rules as the SDK', () => {
   }
 })
 
-test('fresh GitHub template can publish, claim, rebuild and preserve identity', () => {
-  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'rawanide-claim-'))
-  try {
-    fs.cpSync(root, temp, { recursive: true, filter: src => !/[\\/](\.git|node_modules|extensions)([\\/]|$)/.test(src) })
-    const read = file => JSON.parse(fs.readFileSync(path.join(temp, file), 'utf8'))
-    const save = cfg => fs.writeFileSync(path.join(temp, 'repo.config.json'), JSON.stringify(cfg))
-    const run = (repo = 'test/new-repo') => spawnSync(process.execPath, ['tools/build.mjs'], { cwd: temp, encoding: 'utf8', env: { ...Object.fromEntries(Object.entries(process.env).filter(([k]) => !CI_VARS.test(k))), ...PLATFORM_ENV.github, GITHUB_REPOSITORY: repo } })
-    const ok = result => assert.equal(result.status, 0, result.stderr)
-    ok(run())
-    const initial = read('repository.json')
-    assert.notEqual(initial.id, 'community.example.repository')
-    assert.match(initial.id, /^[a-z0-9][a-z0-9._-]{2,63}$/)
-    assert.equal(initial.id, read('repo.config.json').repository.id)
-    assert.equal(initial.repositoryUrl, 'https://github.com/test/new-repo')
-    assert.equal(initial.verification, undefined)
-    const cfg = read('repo.config.json')
-    cfg.verification = 'rwm-' + 'A'.repeat(24); save(cfg)
-    ok(run()); ok(run())
-    assert.equal(read('repository.json').verification, cfg.verification)
-    assert.equal(read('repository.json').id, initial.id)
-    cfg.verification = 'rwm-' + 'B'.repeat(24); save(cfg)
-    assert.notEqual(run().status, 0)
-    assert.equal(read('repository.json').verification, 'rwm-' + 'A'.repeat(24))
-    cfg.verification = 'rwm-' + 'A'.repeat(24); cfg.repository.id = 'community.changed'; save(cfg)
-    assert.notEqual(run().status, 0)
-    assert.equal(read('repository.json').id, initial.id)
-  } finally { fs.rmSync(temp, { recursive: true, force: true }) }
+test('initialization, configuration and build have separate write scopes', () => {
+ const temp = fs.mkdtempSync(path.join(os.tmpdir(),'rawanide-life-'))
+ try {
+  fs.cpSync(root,temp,{recursive:true})
+  const read = f => JSON.parse(fs.readFileSync(path.join(temp,f),'utf8'))
+  const save = c => fs.writeFileSync(path.join(temp,'repo.config.json'),JSON.stringify(c))
+  const run = (...args) => spawnSync(process.execPath,args,{cwd:temp,encoding:'utf8',env:{...process.env,...PLATFORM_ENV.github}})
+  const ok = r => assert.equal(r.status,0,r.stderr)
+  const initial = read('repository.json')
+  ok(run('tools/initialize.mjs')); assert.equal(read('repo.config.json').owner,'test'); assert.deepEqual(read('repository.json'),initial)
+  const c = read('repo.config.json'); c.repository.id='community.myname.rawanide'; c.verification='rwm-'+'A'.repeat(24); save(c)
+  ok(run('tools/initialize.mjs')); assert.deepEqual(read('repo.config.json'),c)
+  assert.notEqual(run('tools/build.mjs').status,0)
+  ok(run('tools/build.mjs','--configure')); const configured=read('repository.json'); assert.equal(configured.verification,c.verification)
+  c.repository.name='changed'; save(c); ok(run('tools/build.mjs')); assert.deepEqual(read('repository.json'),configured)
+  c.verification='rwm-'+'B'.repeat(24); save(c); assert.notEqual(run('tools/build.mjs','--configure').status,0)
+ } finally {fs.rmSync(temp,{recursive:true,force:true})}
 })

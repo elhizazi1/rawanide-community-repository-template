@@ -53,6 +53,9 @@ const fail = (m) => { console.error('✗ ' + m); process.exit(1) }
 
 // ---------- config ----------
 const cfg = JSON.parse(read('repo.config.json'))
+const mode = process.argv[2] || '--extensions'
+if (!['--configure','--extensions'].includes(mode)) fail('Use --configure or --extensions')
+const published = fs.existsSync(path.join(root,'repository.json')) ? JSON.parse(read('repository.json')) : null
 
 // ---------- platform ----------
 // GitHub and GitLab differ only in how the checkout is identified and where the files are served from.
@@ -146,15 +149,10 @@ if (!REPOSITORY || !REPOSITORY.id || !REPOSITORY.name || !REPOSITORY.publisher |
 const RULES = JSON.parse(read('tools/community-rules.json'))
 const ID = new RegExp(RULES.idPattern)
 const VERSION = new RegExp(RULES.versionPattern)
-// Resolve only the unused template placeholder; never migrate a published identity.
-const placeholder = 'community.example.repository'
-const existingCatalog = fs.existsSync(path.join(root, 'repository.json')) ? JSON.parse(read('repository.json')) : null
-if (REPOSITORY.id === placeholder && (!existingCatalog || (existingCatalog.id === placeholder && !existingCatalog.verification && !existingCatalog.extensions?.length))) {
-  const key = `${platformName}/${identity.owner}/${identity.repo}`.toLowerCase()
-  const slug = `${identity.owner}.${identity.repo}`.toLowerCase().replace(/[^a-z0-9._-]/g, '-').slice(0, 35)
-  REPOSITORY.id = `community.${slug}.${crypto.createHash('sha256').update(key).digest('hex').slice(0, 16)}`
-}
+// The developer chooses the ID; never generate or rewrite it.
+if (['community.example.rawanide', 'community.example.repository'].includes(REPOSITORY.id)) fail('Choose your repository ID in repo.config.json before building (replace example in community.example.rawanide).')
 if (!/^[a-z0-9][a-z0-9._-]{2,63}$/.test(REPOSITORY.id) || /^(rawanide|official)(\.|$)/.test(REPOSITORY.id)) fail('repository id is invalid or reserved by Marketplace')
+if (mode === '--configure' && !cfg.verification) fail('Add the Marketplace verification code before configuring')
 if (cfg.verification && (typeof cfg.verification !== 'string' || !/^rwm-[A-Za-z0-9_-]{24}$/.test(cfg.verification))) fail('verification must be the exact Marketplace code (rwm-...)')
 
 const BLOCKED = RULES.blockedPermissions
@@ -405,27 +403,22 @@ function buildExtension(ec, index) {
   return { entry, older, pageExt, folder }
 }
 
-const built = cfg.extensions.map(buildExtension)
-
-// ---------- repository.json ----------
-const repositoryJson = {
-  protocol: '1.0',
-  id: REPOSITORY.id,
-  name: REPOSITORY.name,
-  publisher: REPOSITORY.publisher,
-  description: REPOSITORY.description,
-  homepageUrl: pagesUrl,
-  repositoryUrl,
-  icon: `${rawBase}/icon.svg`,
-  // The code MarketPlace gives you when you claim this repository. Needed once, until it shows as verified.
+const configured = {
+  protocol: '1.0', id: REPOSITORY.id, name: REPOSITORY.name,
+  publisher: REPOSITORY.publisher, description: REPOSITORY.description,
+  homepageUrl: pagesUrl, repositoryUrl, icon: `${rawBase}/icon.svg`,
   ...(cfg.verification ? { verification: cfg.verification } : {}),
   i18n: REPOSITORY.i18n || {},
-  extensions: built.flatMap((b) => [b.entry, ...b.older]),
 }
-if (cfg.repository.id !== REPOSITORY.id) {
-  cfg.repository.id = REPOSITORY.id
-  writeJson('repo.config.json', cfg)
+if (mode === '--extensions') {
+  if (!published || !published.verification || published.id !== configured.id || published.verification !== configured.verification || published.repositoryUrl !== repositoryUrl || published.icon !== configured.icon) fail('Run Configure Repository with your Marketplace code before building extensions')
 }
+const built = mode === '--extensions' ? cfg.extensions.map(buildExtension) : []
+
+// ---------- repository.json ----------
+const repositoryJson = mode === '--configure'
+  ? { ...published, ...configured, extensions: published?.extensions || [] }
+  : { ...published, extensions: built.flatMap(b => [b.entry, ...b.older]) }
 writeJson('repository.json', repositoryJson)
 
 // ---------- pages: refresh the embedded data (used when repository.json cannot be fetched, e.g. file://) ----------
@@ -438,8 +431,9 @@ const inject = (page, data) => {
   if (next === html && !html.includes(json)) warn.push(`${page}: no <!--DATA--> marker found`)
   writeFileSafe(full, next)
 }
-inject('index.html', { repository: repositoryJson, developer })
-inject('about/index.html', { repository: repositoryJson, developer }) // developer page: repository data only (extension list + MarketPlace check)
+const pageDeveloper = mode === '--configure' ? developer : (() => { const m = read('index.html').match(/<script type="application\/json" id="data">([\s\S]*?)<\/script>/); return JSON.parse(m[1]).developer })()
+inject('index.html', { repository: repositoryJson, developer: pageDeveloper })
+inject('about/index.html', { repository: repositoryJson, developer: pageDeveloper }) // developer page: repository data only (extension list + MarketPlace check)
 for (const b of built) inject(`${b.folder}/index.html`, { repository: repositoryJson, extension: b.pageExt })
 
 console.log(`✓ repository.json  →  ${repositoryUrl}  (${built.length} extension${built.length === 1 ? '' : 's'})`)
