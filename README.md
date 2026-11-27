@@ -51,7 +51,7 @@ Add a repository only if you trust its publisher, and review the permissions lis
 ## ⚡ Quick start
 
 1. Create a **new GitHub repository/project** from this template (or import the files). Keep the repository public: RawanIDE downloads `repository.json` and the packages from `raw.githubusercontent.com` without signing in.
-2. Edit `repo.config.json`: set `repository.id` to a **unique ID** before first publication (lowercase letters, digits, `.`, `_`, `-`; at least 3 characters). `owner`, `repo`, and `branch` are detected from GitHub Actions or from the Git `origin` remote; the values in the file are only a fallback (for example when building from a downloaded ZIP). If you do need to set them, `owner` is your GitHub username or organization and `repo` is your repository name.
+2. Edit `repo.config.json`: optionally set `repository.id` to a **unique ID** before first publication (3–64 lowercase letters, digits, `.`, `_`, `-`; reserved Marketplace IDs are not allowed). If left at the template default, the first build generates and saves an ID from the actual repository identity. `owner`, `repo`, and `branch` are detected from GitHub Actions or from the Git `origin` remote; the values in the file are only a fallback (for example when building from a downloaded ZIP). If you do need to set them, `owner` is your GitHub username or organization and `repo` is your repository name.
 3. Open `setup.html` locally in a browser, enter the developer and repository display information, export `developer.json`, and put it in the repository root. For the avatar, use a file under `assets/` or an HTTPS link.
 4. Add your extensions: see [Add an extension](#add-an-extension).
 5. [Build and verify](#build-and-verify), then [publish](#publish-on-github).
@@ -171,7 +171,7 @@ Use `setup.html` to edit the profile and export `developer.json`. The public web
 ## 🔐 Identity and published packages
 
 - Never reuse another publisher's `repository.id` or verification token.
-- When you claim the repository in the RawanIDE Marketplace, put the verification code you receive in `verification` in `repo.config.json`. After registration, do **not** change the repository ID or the verification token. Follow the current Marketplace registration process.
+- When you claim the repository in the RawanIDE Marketplace, put the verification code you receive in `verification` in `repo.config.json`. The first code can be added after the initial build; run the workflow again and wait for the generated `repository.json` to be published before verifying. Do not edit `repository.json` manually. After registration, do **not** change the repository ID or the verification token. Follow the current Marketplace registration process.
 - Previously published `.r1` packages must remain byte-identical; changing them breaks their SHA-256 integrity.
 - Keep this template specific to GitHub; do not copy configuration from another platform.
 

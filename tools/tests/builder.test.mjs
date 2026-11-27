@@ -33,9 +33,13 @@ test('build.mjs uses the shared packer and rules instead of its own copies', () 
 })
 
 test('packing is deterministic and ignores .DS_Store', () => {
-  const first = makeZip(collectFiles(fixture))
-  fs.writeFileSync(path.join(fixture, '.DS_Store'), 'junk')
-  try { assert.ok(makeZip(collectFiles(fixture)).equals(first)) } finally { fs.rmSync(path.join(fixture, '.DS_Store'), { force: true }) }
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'rawanide-packer-'))
+  try {
+    fs.cpSync(fixture, temp, { recursive: true })
+    const first = makeZip(collectFiles(temp))
+    fs.writeFileSync(path.join(temp, '.DS_Store'), 'junk')
+    assert.ok(makeZip(collectFiles(temp)).equals(first))
+  } finally { fs.rmSync(temp, { recursive: true, force: true }) }
 })
 
 // ---- end-to-end builds in a temporary copy of this template ----
@@ -111,4 +115,33 @@ test('the builder enforces the same community rules as the SDK', () => {
       assert.match(run.result.stderr, pattern, label)
     } finally { run.cleanup() }
   }
+})
+
+test('fresh GitHub template can publish, claim, rebuild and preserve identity', () => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'rawanide-claim-'))
+  try {
+    fs.cpSync(root, temp, { recursive: true, filter: src => !/[\\/](\.git|node_modules|extensions)([\\/]|$)/.test(src) })
+    const read = file => JSON.parse(fs.readFileSync(path.join(temp, file), 'utf8'))
+    const save = cfg => fs.writeFileSync(path.join(temp, 'repo.config.json'), JSON.stringify(cfg))
+    const run = (repo = 'test/new-repo') => spawnSync(process.execPath, ['tools/build.mjs'], { cwd: temp, encoding: 'utf8', env: { ...Object.fromEntries(Object.entries(process.env).filter(([k]) => !CI_VARS.test(k))), ...PLATFORM_ENV.github, GITHUB_REPOSITORY: repo } })
+    const ok = result => assert.equal(result.status, 0, result.stderr)
+    ok(run())
+    const initial = read('repository.json')
+    assert.notEqual(initial.id, 'community.example.repository')
+    assert.match(initial.id, /^[a-z0-9][a-z0-9._-]{2,63}$/)
+    assert.equal(initial.id, read('repo.config.json').repository.id)
+    assert.equal(initial.repositoryUrl, 'https://github.com/test/new-repo')
+    assert.equal(initial.verification, undefined)
+    const cfg = read('repo.config.json')
+    cfg.verification = 'rwm-' + 'A'.repeat(24); save(cfg)
+    ok(run()); ok(run())
+    assert.equal(read('repository.json').verification, cfg.verification)
+    assert.equal(read('repository.json').id, initial.id)
+    cfg.verification = 'rwm-' + 'B'.repeat(24); save(cfg)
+    assert.notEqual(run().status, 0)
+    assert.equal(read('repository.json').verification, 'rwm-' + 'A'.repeat(24))
+    cfg.verification = 'rwm-' + 'A'.repeat(24); cfg.repository.id = 'community.changed'; save(cfg)
+    assert.notEqual(run().status, 0)
+    assert.equal(read('repository.json').id, initial.id)
+  } finally { fs.rmSync(temp, { recursive: true, force: true }) }
 })

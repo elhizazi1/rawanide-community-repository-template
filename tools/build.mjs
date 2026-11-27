@@ -146,7 +146,16 @@ if (!REPOSITORY || !REPOSITORY.id || !REPOSITORY.name || !REPOSITORY.publisher |
 const RULES = JSON.parse(read('tools/community-rules.json'))
 const ID = new RegExp(RULES.idPattern)
 const VERSION = new RegExp(RULES.versionPattern)
-if (!ID.test(REPOSITORY.id)) fail('repository id is invalid')
+// Resolve only the unused template placeholder; never migrate a published identity.
+const placeholder = 'community.example.repository'
+const existingCatalog = fs.existsSync(path.join(root, 'repository.json')) ? JSON.parse(read('repository.json')) : null
+if (REPOSITORY.id === placeholder && (!existingCatalog || (existingCatalog.id === placeholder && !existingCatalog.verification && !existingCatalog.extensions?.length))) {
+  const key = `${platformName}/${identity.owner}/${identity.repo}`.toLowerCase()
+  const slug = `${identity.owner}.${identity.repo}`.toLowerCase().replace(/[^a-z0-9._-]/g, '-').slice(0, 35)
+  REPOSITORY.id = `community.${slug}.${crypto.createHash('sha256').update(key).digest('hex').slice(0, 16)}`
+}
+if (!/^[a-z0-9][a-z0-9._-]{2,63}$/.test(REPOSITORY.id) || /^(rawanide|official)(\.|$)/.test(REPOSITORY.id)) fail('repository id is invalid or reserved by Marketplace')
+if (cfg.verification && (typeof cfg.verification !== 'string' || !/^rwm-[A-Za-z0-9_-]{24}$/.test(cfg.verification))) fail('verification must be the exact Marketplace code (rwm-...)')
 
 const BLOCKED = RULES.blockedPermissions
 
@@ -412,6 +421,10 @@ const repositoryJson = {
   ...(cfg.verification ? { verification: cfg.verification } : {}),
   i18n: REPOSITORY.i18n || {},
   extensions: built.flatMap((b) => [b.entry, ...b.older]),
+}
+if (cfg.repository.id !== REPOSITORY.id) {
+  cfg.repository.id = REPOSITORY.id
+  writeJson('repo.config.json', cfg)
 }
 writeJson('repository.json', repositoryJson)
 

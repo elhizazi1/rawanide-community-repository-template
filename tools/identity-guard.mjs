@@ -9,10 +9,9 @@ const get=(p)=>JSON.parse(fs.readFileSync(path.join(root,p),'utf8'))
 const cfg=get('repo.config.json')
 const existing=fs.existsSync(path.join(root,'repository.json'))?get('repository.json'):null
 const errors=[]
-if(existing && !(existing.id === 'community.example.repository' && (!existing.extensions || existing.extensions.length === 0) && !existing.verification && !cfg.verification)){
+if(existing && !(existing.id === 'community.example.repository' && (!existing.extensions || existing.extensions.length === 0) && !existing.verification)){
  if(existing.id!==cfg.repository.id) errors.push(`Repository ID mismatch: published=${existing.id}, config=${cfg.repository.id}`)
- if(Object.hasOwn(existing,'verification') && existing.verification!==cfg.verification) errors.push('Published verification token differs from config')
- if(!Object.hasOwn(existing,'verification') && cfg.verification) errors.push('Config adds verification token to an existing repository; manual review required')
+ if(existing.verification && existing.verification!==cfg.verification) errors.push('Published verification token differs from config')
  for(const e of existing.extensions||[]){
   const id=e.id, version=e.version
   if(!id||!version){errors.push('Published extension lacks id/version');continue}

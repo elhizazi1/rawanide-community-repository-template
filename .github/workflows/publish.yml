@@ -42,7 +42,7 @@ jobs:
       - name: Commit generated files
         shell: bash
         run: |
-          git add -A -- repository.json index.html about
+          git add -A -- repo.config.json repository.json index.html about
           if [[ -d extensions ]]; then
             git add -A -- extensions
           fi
