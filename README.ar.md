@@ -270,6 +270,19 @@ git push origin main
 
 احتفظ بأقل API تحتاجه الإضافة: `apiVersion: "1.0"` للواجهات الأساسية، و`"1.1"` لاستخدام `workspace.findFiles` و`workspace.findText` مع صلاحية `FILE_READ`. لا يُرفع إصدار الإضافات القديمة ولا تُعاد كتابة حزمها المنشورة لمجرد تحديث القالب. إصدار SDK وإصدار API وبروتوكول المستودع وإصدار الإضافة أرقام مستقلة تؤدي أغراضًا مختلفة.
 
-[مثال البحث في المشروع](examples/hosted-js-project-search/README.ar.md) من SDK 1.1.0 موجود للتجربة فقط؛ لا يُنشر تلقائيًا ولا يضاف إلى `repo.config.json`. اقرأ [دليل التكامل العربي](docs/SDK_INTEGRATION.ar.md) و[عقد البحث](docs/workspace-search-1.1.ar.md). API Explorer أداة اختيارية داخل التطبيق لفحص بيئة المضيف والمصادر؛ ليس اعتمادًا في القالب أو شهادة أمان أو إثباتًا أن الاستدعاءات التي وجدها في المصدر نُفذت بنجاح.
+### القوالب الرسمية الستة
+
+توجد نسخ مطابقة لقوالب SDK 1.1.0 في `examples/`. اختر قالبًا وانسخه إلى مجلد مصدر مستقل، ثم خصص معرف الإضافة والناشر والبيانات قبل تسجيل مسار المصدر في `repo.config.json`. لا تُبنى الأمثلة أو تُنشر تلقائيًا؛ تبقى قائمة `extensions` فارغة في القالب الجديد.
+
+| القالب | الاستخدام |
+|---|---|
+| [`declarative`](examples/declarative/README.ar.md) | مساهمات تصريحية دون JavaScript |
+| [`hosted-js`](examples/hosted-js/README.ar.md) | أمر JavaScript ورسالة Toast |
+| [`hosted-js-panel`](examples/hosted-js-panel/README.ar.md) | لوحة HTML دون اتصال |
+| [`hosted-js-selection-panel`](examples/hosted-js-selection-panel/README.ar.md) | لوحة لعرض النص المحدد للقراءة فقط |
+| [`hosted-js-safe-edit`](examples/hosted-js-safe-edit/README.ar.md) | استبدال النص المحدد بعد التأكيد |
+| [`hosted-js-project-search`](examples/hosted-js-project-search/README.ar.md) | البحث في ملفات ونصوص المشروع (API 1.1) |
+
+اقرأ [دليل التكامل العربي](docs/SDK_INTEGRATION.ar.md) و[عقد البحث](docs/workspace-search-1.1.ar.md). API Explorer أداة اختيارية داخل التطبيق لفحص بيئة المضيف والمصادر؛ ليس اعتمادًا في القالب أو شهادة أمان أو إثباتًا أن الاستدعاءات التي وجدها في المصدر نُفذت بنجاح.
 
 ثبّت SDK 1.1.0 من سجل npm العام. للتثبيت دون اتصال يمكن استخدام أرشيف SDK محمّل مسبقًا: `npm install --global /path/to/elhizazi1-extension-sdk-1.1.0.tgz` مع استبدال المسار بمكان الملف.

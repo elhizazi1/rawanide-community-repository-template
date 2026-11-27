@@ -270,4 +270,17 @@ The full bundled font license is included as [`assets/fonts/OFL.txt`](assets/fon
 
 Use the lowest API your extension requires: keep `apiVersion: "1.0"` for baseline extensions; use `"1.1"` when calling `workspace.findFiles` or `workspace.findText`, with `FILE_READ`. SDK version `1.1.0`, host API `1.1`, repository protocol `1.0` and each extension's version have different purposes. Do not bump old package versions or rewrite published archives merely to refresh this template.
 
-The opt-in [project search example](examples/hosted-js-project-search/README.md) is copied from SDK 1.1.0. It is not listed in `repo.config.json` and will not be published automatically. See [SDK integration and the complete test flow](docs/SDK_INTEGRATION.md), [search contract](docs/workspace-search-1.1.md), and [Arabic integration guide](docs/SDK_INTEGRATION.ar.md). API Explorer is an optional app-side development aid, not a repository dependency, certification, or proof that scanned source code executed successfully.
+### Six official starter templates
+
+The `examples/` directory contains exact copies of the SDK 1.1.0 templates. Copy a starter into a separate source directory, customize its extension ID, publisher and metadata, then register its source path in `repo.config.json`. Examples are not built or published automatically; the new repository starts with an empty `extensions` list.
+
+| Template | Purpose |
+|---|---|
+| [`declarative`](examples/declarative/README.md) | Declarative contributions without JavaScript |
+| [`hosted-js`](examples/hosted-js/README.md) | JavaScript command and toast |
+| [`hosted-js-panel`](examples/hosted-js-panel/README.md) | Offline HTML panel |
+| [`hosted-js-selection-panel`](examples/hosted-js-selection-panel/README.md) | Read-only selected-text panel |
+| [`hosted-js-safe-edit`](examples/hosted-js-safe-edit/README.md) | Confirmed selection replacement |
+| [`hosted-js-project-search`](examples/hosted-js-project-search/README.md) | Workspace file and text search (API 1.1) |
+
+See [SDK integration and the complete test flow](docs/SDK_INTEGRATION.md), [search contract](docs/workspace-search-1.1.md), and [Arabic integration guide](docs/SDK_INTEGRATION.ar.md). API Explorer is an optional app-side development aid, not a repository dependency, certification, or proof that scanned source code executed successfully.

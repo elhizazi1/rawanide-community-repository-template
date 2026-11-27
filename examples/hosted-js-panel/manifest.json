@@ -1,0 +1,37 @@
+{
+  "id": "local.sdk-panel",
+  "name": "SDK Panel Example",
+  "version": "0.4.0",
+  "publisher": "RawanIDE SDK Example",
+  "description": "Offline HTML panel sample",
+  "localizedMetadata": {
+    "en": {
+      "name": "SDK Panel Example",
+      "description": "Offline HTML panel sample"
+    },
+    "ar": {
+      "name": "لوحة إضافة — مثال",
+      "description": "أمر يفتح لوحة HTML داخل التطبيق دون اتصال."
+    }
+  },
+  "apiVersion": "1.0",
+  "runtime": "hosted-js",
+  "category": "Tools",
+  "entrypoint": "src/extension.js",
+  "activationEvents": [
+    "onCommand"
+  ],
+  "permissions": [
+    "UI_ACCESS"
+  ],
+  "commands": [
+    {
+      "id": "local.sdk-panel.open",
+      "title": "SDK Panel: Open",
+      "runtime": true,
+      "group": "SDK Panel"
+    }
+  ],
+  "icon": "assets/icon.svg",
+  "license": "MIT"
+}
